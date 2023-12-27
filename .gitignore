@@ -1,0 +1,6 @@
+/Debug/
+/Release/
+.mxproject
+/.settings/
+*.launch
+*.lnk
