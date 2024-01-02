@@ -23,8 +23,18 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
 
-#include "usbd_cdc_if.h"
+#include "../../UserLib/motor_control.hpp"
+
+#include "../../STM32HAL_CommonLib/can_comm.hpp"
+#include "../../STM32HAL_CommonLib/pwm.hpp"
+#include "../../STM32HAL_CommonLib/data_packet.hpp"
+#include "../../STM32HAL_CommonLib/data_convert.hpp"
+#include "../../STM32HAL_CommonLib/serial_comm.hpp"
+
+using namespace G24_STM32HAL::CommonLib;
+using namespace G24_STM32HAL::RmcLib;
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -67,6 +77,27 @@ static void MX_TIM5_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+CanComm can_main = CanComm(&hcan2,CAN_RX_FIFO1,CAN_FILTER_FIFO1,CAN_IT_RX_FIFO1_MSG_PENDING);
+CanComm can_c6x0 = CanComm(&hcan1,CAN_RX_FIFO0,CAN_FILTER_FIFO0,CAN_IT_RX_FIFO0_MSG_PENDING);
+//
+//void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
+//	can_c6x0.rx_interrupt_task();
+//}
+//void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan){
+//	can_main.rx_interrupt_task();
+//}
+
+auto LED_R = PWMHard(&htim5,TIM_CHANNEL_1);
+auto LED_G = PWMHard(&htim5,TIM_CHANNEL_2);
+auto LED_B = PWMHard(&htim5,TIM_CHANNEL_3);
+
+extern USBD_HandleTypeDef hUsbDeviceFS;
+UsbCdcComm usb_cdc(&hUsbDeviceFS);
+
+void usb_cdc_rx_callback(const uint8_t *input,size_t size){
+	usb_cdc.rx_interrupt_task(input, size);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -103,8 +134,6 @@ int main(void)
   MX_I2C3_Init();
   MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_1);
-  int count = 0;
 
   /* USER CODE END 2 */
 
@@ -115,10 +144,16 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  char usb_tx[64] = {0};
-
-	  	  sprintf(usb_tx,"test\r\n");
-	  	  CDC_Transmit_FS((uint8_t *)usb_tx, strlen(usb_tx));
+//	  if(can_c6x0.rx_available()){
+//		  CanFrame rx_frame;
+//		  can_c6x0.rx(rx_frame);
+//		  C6x0State state;
+//		  state.convert_from_can_frame(rx_frame);
+//		  char str[64] = {0};
+//		  sprintf(str,"id:%d,angle:%d,speed:%d,current:%d,tmp:%d",state.id,state.angle,state.speed,state.motor_current,state.motor_temperature);
+//		  //usb_cdc.tx((uint8_t*)str,strlen(str));
+//	  }
+	  HAL_Delay(10);
   }
   /* USER CODE END 3 */
 }

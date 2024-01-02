@@ -12,7 +12,7 @@
 namespace G24_STM32HAL::RmcLib{
 
 
-	float PID::calc(float target,float feedback){
+	float PID::operator() (float target,float feedback){
 		error = target - feedback;
 		float p = error * kp;
 

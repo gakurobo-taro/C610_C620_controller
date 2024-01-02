@@ -56,6 +56,9 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
+#define USE_USB_CDC
+void usb_cdc_rx_callback(const uint8_t *input,size_t size);
+#define USE_CAN
 void SystemClock_Config(void);
 
 /* USER CODE END EFP */

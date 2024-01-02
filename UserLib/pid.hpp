@@ -32,7 +32,7 @@ public:
 	PID(float _pid_freq,float _limit_min,float _limit_max)
 		:pid_freq(_pid_freq),limit_min(_limit_max),limit_max(_limit_min),enable_anti_windup(true){}
 
-	float calc(float target,float feedback);
+	float operator()(float target,float feedback);
 
 	//inline functions
 	void set_gain(float _kp,float _ki,float _kd){
