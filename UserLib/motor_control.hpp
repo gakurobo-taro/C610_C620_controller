@@ -24,88 +24,69 @@ namespace G24_STM32HAL::RmcLib{
 		ABS_POSITION_MODE,
 	};
 
-
-	class IMotorDriver{
-		virtual void set_control_mode(ControlMode mode) = 0;
-		virtual ControlMode get_control_mode(void) = 0;
-
-		virtual void set_pwm(float  _pwm) = 0;
-		virtual float get_pwm(void) = 0;
-
-		virtual void set_target_speed(float rad_per_sec) = 0;
-		virtual float get_target_speed(void) = 0;
-		virtual float get_current_speed(void) = 0;
-
-		virtual void set_target_position(float rad) = 0;
-		virtual float get_target_position(void) = 0;
-		virtual float get_current_position(void) = 0;
-
-		virtual void set_speed_gain(float kp,float ki,float kd) = 0;
-		virtual void set_position_gain(float kp,float ki,float kd) = 0;
-
-		virtual bool is_active(void) = 0;
+	struct MotorState{
+		float rad;
+		float speed;
+		float current;
+		float temperature;
 	};
 
-	struct C6x0State{
-		uint32_t id;
-		uint16_t angle; //0~8191
-		int16_t speed;  //rpm
-		int16_t current;
-		uint8_t temperature; //only C620
+	struct C6x0State:MotorState{
+	private:
+		const float gear_ratio;
+		const float ks;
+	public:
+		AngleEncoder encoder;
+		C6x0State(float _gear_ratio):
+			gear_ratio(_gear_ratio),ks(2*M_PI/(gear_ratio*360.0f)),
+			encoder(gear_ratio,13){}
 
-		bool convert_from_can_frame(CommonLib::CanFrame frame){
-			if(frame.is_ext_id || frame.is_remote || frame.data_length != 8){
+		bool update(CommonLib::CanFrame frame){
+			if(frame.is_ext_id || frame.is_remote || frame.data_length != 8 || !(0x200&frame.id)){
 				return false;
 			}
-			id = frame.id;
-			angle = frame.data[0]<<8 | frame.data[1];
-			speed = frame.data[2]<<8 | frame.data[3];
-			current = frame.data[4]<<8 | frame.data[5];
-			temperature = frame.data[6];
-			//TODO:エディアン考慮したreader/writer
+			rad = encoder.update_angle(frame.data[0]<<8 | frame.data[1]);
+			speed = (float)(int16_t)(frame.data[2]<<8 | frame.data[3]) * ks;
+			current = (float)(frame.data[4]<<8 | frame.data[5]);
+			temperature = (float)frame.data[6];
 			return true;
 		}
 	};
 
-	class C610Driver:IMotorDriver{
+	class MotorDriver{
 	private:
-		static constexpr float ks = 2*M_PI/(36.0f*360.0f);
-
 		ControlMode mode = ControlMode::PWM_MODE;
 		float pwm;
 		float target_speed;
-		float speed;
 		float target_rad;
-		float rad;
-
-		C6x0Encoder enc = C6x0Encoder{36.0f,13};
+		MotorState state;
 
 		PID speed_pid = PID{1,-1,1};
 		PID position_pid = PID{1,-260,260};
 
 	public:
-		void set_control_mode(ControlMode _mode) override{ mode = _mode; }
-		ControlMode get_control_mode(void) override{ return mode; }
+		//mode setting
+		void set_control_mode(ControlMode _mode){ mode = _mode; }
+		ControlMode get_control_mode(void){ return mode; }
 
-		void set_pwm(float _pwm)override{ pwm = std::clamp(_pwm,-1.0f,1.0f); }
-		float get_pwm(void)override{ return pwm; }
+		//pwm control
+		void set_pwm(float _pwm){ pwm = std::clamp(_pwm,-1.0f,1.0f); }
+		float get_pwm(void){ return pwm; }
 
-		void set_target_speed(float rad_per_sec)override{ target_speed = rad_per_sec; }
+		//speed control
+		void set_speed_gain(float kp,float ki,float kd){speed_pid.set_gain(kp, ki, kd);}
+		void set_target_speed(float rad_per_sec){ target_speed = rad_per_sec; }
+		float get_target_speed(void){return target_speed; }
+		float get_current_speed(void){return state.speed;}
 
-		float get_target_speed(void) override{return target_speed; }
-		float get_current_speed(void) override{return speed;}
+		//position control
+		void set_position_gain(float kp,float ki,float kd){position_pid.set_gain(kp, ki, kd);}
+		void set_target_position(float rad){target_rad = rad;}
+		float get_target_position(void){ return target_rad; }
+		float get_current_position(void){return state.rad;}
 
-		void set_target_position(float rad) override {target_rad = rad;}
-		float get_target_position(void)override{ return target_rad; }
-		float get_current_position(void)override{return rad;}
-
-		void set_speed_gain(float kp,float ki,float kd)override{speed_pid.set_gain(kp, ki, kd);}
-		void set_position_gain(float kp,float ki,float kd)override{position_pid.set_gain(kp, ki, kd);}
-
-		bool is_active(void)override{return true;}
-
-		void calc(const C6x0State state);
-
+		//pid operation
+		float update_operation_val(const MotorState &_state);
 	};
 }
 

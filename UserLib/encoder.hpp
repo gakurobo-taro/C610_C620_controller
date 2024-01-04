@@ -17,10 +17,9 @@ namespace G24_STM32HAL::RmcLib{
 		//指定したangleを指定したradとして解釈する（現在の角度(angle)を0(rad)としろ的な）
 		virtual void set_angle_bias(uint16_t angle,float rad) = 0;
 		virtual float get_rad(void) = 0;
-		virtual float update_angle(uint16_t angle) = 0;
 	};
 
-	class C6x0Encoder : public IEncoder{
+	class AngleEncoder : public IEncoder{
 	private:
 		const float gear_ratio;
 		const size_t resolution_bit;
@@ -33,7 +32,7 @@ namespace G24_STM32HAL::RmcLib{
 		int turn_count;
 
 	public:
-		C6x0Encoder(float _gear_ratio,size_t _resolution_bit):
+		AngleEncoder(float _gear_ratio,size_t _resolution_bit):
 			gear_ratio(_gear_ratio),
 			resolution_bit(_resolution_bit),
 			resolution(1<<resolution_bit),
@@ -47,7 +46,8 @@ namespace G24_STM32HAL::RmcLib{
 		float get_rad(void)override{
 			return angle_to_rad*(raw_angle + turn_count*(int)resolution);
 		}
-		float update_angle(uint16_t angle)override{
+
+		float update_angle(uint16_t angle){
 			angle = angle&(resolution-1);
 			int angle_top2 = angle>>(resolution_bit-2);
 			int old_angle_top2 = raw_angle>>(resolution_bit-2);

@@ -100,8 +100,8 @@ void usb_cdc_rx_callback(const uint8_t *input,size_t size){
 	usb_cdc.rx_interrupt_task(input, size);
 }
 
-C610Driver motor;
-C6x0State motor_state;
+MotorDriver motor;
+C6x0State motor_state(36.0);
 int16_t dutys[4] = {0};
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
@@ -116,11 +116,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     		CanFrame rx_frame;
     		can_c6x0.rx(rx_frame);
 
-    		motor_state.convert_from_can_frame(rx_frame);
+    		motor_state.update(rx_frame);
 
-    		if(motor_state.id == 0x201){
+    		if(rx_frame.id == 0x201){
     			HAL_GPIO_TogglePin(RM_LED1_GPIO_Port,RM_LED1_Pin);
-    			motor.calc(motor_state);
+    			motor.update_operation_val(motor_state);
     			dutys[0] = (int16_t)(motor.get_pwm() * 10000.0f);
     		}
     	}
@@ -184,7 +184,7 @@ int main(void)
   char str[64] = {0};
 
   motor.set_speed_gain(0.2f, 0.005, 0);
-  motor.set_position_gain(0.1f, 0.0002, 0);
+  motor.set_position_gain(1.0f, 0.001, 0);
 
   /* USER CODE END 2 */
 
@@ -197,13 +197,13 @@ int main(void)
     /* USER CODE BEGIN 3 */
 
 	  motor.set_control_mode(ControlMode::POSITION_MODE);
-	  motor.set_target_position(3.0f);
+	  motor.set_target_position(10.0f);
 
 //	  motor.set_control_mode(ControlMode::SPEED_MODE);
-//	  motor.set_target_speed(-0.5f);
+//	  motor.set_target_speed(0.1f);
 
 //	  motor.set_control_mode(ControlMode::PWM_MODE);
-//	  motor.set_pwm(-0.1f);
+//	  motor.set_pwm(0.01f);
 
 //	  sprintf(str,"mode:%d,pwm:%4.3f,speed:%4.3f,target_speed:%4.3f\r\n",
 //			  (int)motor.get_control_mode(),motor.get_pwm(),motor.get_current_speed(),motor.get_target_speed());
@@ -213,8 +213,9 @@ int main(void)
 //	  sprintf(str,"angle:%d,speed:%d\r\n",motor_state.angle,motor_state.speed);
 //	  usb_cdc.tx((uint8_t*)str,strlen(str));
 
-	  sprintf(str,"%4.3f,%4.3f,%4.3f,%4.3f\r\n",
-			  motor.get_pwm(),motor.get_current_speed(),motor.get_target_speed(),motor.get_current_position());
+//	  sprintf(str,"%4.3f,%4.3f,%4.3f,%4.3f\r\n",
+//			  motor.get_pwm(),motor.get_current_speed(),motor.get_target_speed(),motor.get_current_position());
+	  sprintf(str,"%4.3f,%4.3f\r\n",motor_state.rad,motor_state.speed);
 
 	  usb_cdc.tx((uint8_t*)str,strlen(str));
 	  LED_G.out_as_gpio_toggle();
