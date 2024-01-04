@@ -27,11 +27,11 @@
 
 #include "../../UserLib/motor_control.hpp"
 
-#include "../../STM32HAL_CommonLib/can_comm.hpp"
-#include "../../STM32HAL_CommonLib/pwm.hpp"
-#include "../../STM32HAL_CommonLib/data_packet.hpp"
-#include "../../STM32HAL_CommonLib/data_convert.hpp"
-#include "../../STM32HAL_CommonLib/serial_comm.hpp"
+#include "../../UserLib/STM32HAL_CommonLib/can_comm.hpp"
+#include "../../UserLib/STM32HAL_CommonLib/pwm.hpp"
+#include "../../UserLib/STM32HAL_CommonLib/data_packet.hpp"
+#include "../../UserLib/STM32HAL_CommonLib/data_convert.hpp"
+#include "../../UserLib/STM32HAL_CommonLib/serial_comm.hpp"
 
 using namespace G24_STM32HAL::CommonLib;
 using namespace G24_STM32HAL::RmcLib;
@@ -58,6 +58,7 @@ CAN_HandleTypeDef hcan2;
 I2C_HandleTypeDef hi2c3;
 
 TIM_HandleTypeDef htim5;
+TIM_HandleTypeDef htim14;
 
 /* USER CODE BEGIN PV */
 
@@ -70,6 +71,7 @@ static void MX_CAN1_Init(void);
 static void MX_CAN2_Init(void);
 static void MX_I2C3_Init(void);
 static void MX_TIM5_Init(void);
+static void MX_TIM14_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -79,23 +81,58 @@ static void MX_TIM5_Init(void);
 
 CanComm can_main = CanComm(&hcan2,CAN_RX_FIFO1,CAN_FILTER_FIFO1,CAN_IT_RX_FIFO1_MSG_PENDING);
 CanComm can_c6x0 = CanComm(&hcan1,CAN_RX_FIFO0,CAN_FILTER_FIFO0,CAN_IT_RX_FIFO0_MSG_PENDING);
-//
-//void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
-//	can_c6x0.rx_interrupt_task();
-//}
-//void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan){
-//	can_main.rx_interrupt_task();
-//}
 
-auto LED_R = PWMHard(&htim5,TIM_CHANNEL_1);
-auto LED_G = PWMHard(&htim5,TIM_CHANNEL_2);
-auto LED_B = PWMHard(&htim5,TIM_CHANNEL_3);
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
+	can_c6x0.rx_interrupt_task();
+}
+void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan){
+	can_main.rx_interrupt_task();
+}
+
+PWMHard LED_R(&htim5,TIM_CHANNEL_1);
+PWMHard LED_G(&htim5,TIM_CHANNEL_2);
+PWMHard LED_B(&htim5,TIM_CHANNEL_3);
 
 extern USBD_HandleTypeDef hUsbDeviceFS;
 UsbCdcComm usb_cdc(&hUsbDeviceFS);
 
 void usb_cdc_rx_callback(const uint8_t *input,size_t size){
 	usb_cdc.rx_interrupt_task(input, size);
+}
+
+C610Driver motor;
+C6x0State motor_state;
+int16_t dutys[4] = {0};
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim == &htim14){
+    	usb_cdc.tx_interrupt_task();
+
+    	CanFrame tx_frame;
+    	tx_frame.id = 0x200;
+
+    	if(can_c6x0.rx_available()){
+
+    		CanFrame rx_frame;
+    		can_c6x0.rx(rx_frame);
+
+    		motor_state.convert_from_can_frame(rx_frame);
+
+    		if(motor_state.id == 0x201){
+    			HAL_GPIO_TogglePin(RM_LED1_GPIO_Port,RM_LED1_Pin);
+    			motor.calc(motor_state);
+    			dutys[0] = (int16_t)(motor.get_pwm() * 10000.0f);
+    		}
+    	}
+
+    	auto writer = tx_frame.writer();
+    	writer.write<uint8_t>(dutys[0]>>8);
+    	writer.write<uint8_t>(dutys[0]&0xFF);
+    	tx_frame.data_length = 8;
+    	can_c6x0.tx(tx_frame);
+
+    	LED_R.out_as_gpio_toggle();
+    }
 }
 
 /* USER CODE END 0 */
@@ -133,7 +170,21 @@ int main(void)
   MX_CAN2_Init();
   MX_I2C3_Init();
   MX_TIM5_Init();
+  MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
+  can_main.start();
+  can_main.set_filter_free(16);
+  can_c6x0.start();
+  can_c6x0.set_filter_free(0);
+  LED_R.start();
+  LED_G.start();
+
+  HAL_TIM_Base_Start_IT(&htim14);
+
+  char str[64] = {0};
+
+  motor.set_speed_gain(0.2f, 0.005, 0);
+  motor.set_position_gain(0.1f, 0.0002, 0);
 
   /* USER CODE END 2 */
 
@@ -144,16 +195,30 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-//	  if(can_c6x0.rx_available()){
-//		  CanFrame rx_frame;
-//		  can_c6x0.rx(rx_frame);
-//		  C6x0State state;
-//		  state.convert_from_can_frame(rx_frame);
-//		  char str[64] = {0};
-//		  sprintf(str,"id:%d,angle:%d,speed:%d,current:%d,tmp:%d",state.id,state.angle,state.speed,state.motor_current,state.motor_temperature);
-//		  //usb_cdc.tx((uint8_t*)str,strlen(str));
-//	  }
-	  HAL_Delay(10);
+
+	  motor.set_control_mode(ControlMode::POSITION_MODE);
+	  motor.set_target_position(3.0f);
+
+//	  motor.set_control_mode(ControlMode::SPEED_MODE);
+//	  motor.set_target_speed(-0.5f);
+
+//	  motor.set_control_mode(ControlMode::PWM_MODE);
+//	  motor.set_pwm(-0.1f);
+
+//	  sprintf(str,"mode:%d,pwm:%4.3f,speed:%4.3f,target_speed:%4.3f\r\n",
+//			  (int)motor.get_control_mode(),motor.get_pwm(),motor.get_current_speed(),motor.get_target_speed());
+//	  usb_cdc.tx((uint8_t*)str,strlen(str));
+
+//	  HAL_Delay(1);
+//	  sprintf(str,"angle:%d,speed:%d\r\n",motor_state.angle,motor_state.speed);
+//	  usb_cdc.tx((uint8_t*)str,strlen(str));
+
+	  sprintf(str,"%4.3f,%4.3f,%4.3f,%4.3f\r\n",
+			  motor.get_pwm(),motor.get_current_speed(),motor.get_target_speed(),motor.get_current_position());
+
+	  usb_cdc.tx((uint8_t*)str,strlen(str));
+	  LED_G.out_as_gpio_toggle();
+	  HAL_Delay(2);
   }
   /* USER CODE END 3 */
 }
@@ -371,6 +436,37 @@ static void MX_TIM5_Init(void)
 
   /* USER CODE END TIM5_Init 2 */
   HAL_TIM_MspPostInit(&htim5);
+
+}
+
+/**
+  * @brief TIM14 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM14_Init(void)
+{
+
+  /* USER CODE BEGIN TIM14_Init 0 */
+
+  /* USER CODE END TIM14_Init 0 */
+
+  /* USER CODE BEGIN TIM14_Init 1 */
+
+  /* USER CODE END TIM14_Init 1 */
+  htim14.Instance = TIM14;
+  htim14.Init.Prescaler = 84-1;
+  htim14.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim14.Init.Period = 2000-1;
+  htim14.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim14.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim14) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM14_Init 2 */
+
+  /* USER CODE END TIM14_Init 2 */
 
 }
 

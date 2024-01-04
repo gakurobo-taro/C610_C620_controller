@@ -30,7 +30,7 @@ private:
 public:
 	PID(float _pid_freq = 1):pid_freq(_pid_freq){}
 	PID(float _pid_freq,float _limit_min,float _limit_max)
-		:pid_freq(_pid_freq),limit_min(_limit_max),limit_max(_limit_min),enable_anti_windup(true){}
+		:pid_freq(_pid_freq),limit_min(_limit_min),limit_max(_limit_max),enable_anti_windup(true){}
 
 	float operator()(float target,float feedback);
 
