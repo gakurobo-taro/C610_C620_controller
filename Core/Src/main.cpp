@@ -27,19 +27,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
-#include <array>
+#include "../../UserLib/board_task.hpp"
 
-#include "../../UserLib/motor_control.hpp"
-
-#include "../../UserLib/STM32HAL_CommonLib/can_comm.hpp"
-#include "../../UserLib/STM32HAL_CommonLib/pwm.hpp"
-#include "../../UserLib/STM32HAL_CommonLib/data_packet.hpp"
-#include "../../UserLib/STM32HAL_CommonLib/data_convert.hpp"
-#include "../../UserLib/STM32HAL_CommonLib/serial_comm.hpp"
-
-using namespace G24_STM32HAL::CommonLib;
-using namespace G24_STM32HAL::RmcLib;
+using namespace G24_STM32HAL::RmcBoard;
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -70,73 +60,24 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-PWMHard LED_R(&htim5,TIM_CHANNEL_1);
-PWMHard LED_G(&htim5,TIM_CHANNEL_2);
-PWMHard LED_B(&htim5,TIM_CHANNEL_3);
-
-CanComm can_main = CanComm(&hcan2,CAN_RX_FIFO1,CAN_FILTER_FIFO1,CAN_IT_RX_FIFO1_MSG_PENDING);
-CanComm can_c6x0 = CanComm(&hcan1,CAN_RX_FIFO0,CAN_FILTER_FIFO0,CAN_IT_RX_FIFO0_MSG_PENDING);
-
-std::array<MotorDriver,4> motor;
-
-std::array<C6x0State,4> motor_state{
-		C6x0State(36.0f),
-		C6x0State(36.0f),
-		C6x0State(36.0f),
-		C6x0State(36.0f)
-};
-
-std::array<GPIO_TypeDef *,4> LED_port {RM_LED1_GPIO_Port,RM_LED2_GPIO_Port,RM_LED3_GPIO_Port,RM_LED4_GPIO_Port};
-std::array<uint16_t,4> LED_pin {RM_LED1_Pin,RM_LED2_Pin,RM_LED3_Pin,RM_LED4_Pin};
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 	can_c6x0.rx_interrupt_task();
-
-	CanFrame rx_frame;
-	can_c6x0.rx(rx_frame);
-
-	if(rx_frame.id & 0x200){
-		int id = (rx_frame.id&0xF)-1;
-		motor_state.at(id).update(rx_frame);
-		motor.at(id).update_operation_val(motor_state.at(id));
-		HAL_GPIO_WritePin(LED_port[id],LED_pin[id],GPIO_PIN_SET);
-	}
+	motor_data_process();
 }
 void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan){
 	can_main.rx_interrupt_task();
 }
 
-
-
-extern USBD_HandleTypeDef hUsbDeviceFS;
-UsbCdcComm usb_cdc(&hUsbDeviceFS);
-
 void usb_cdc_rx_callback(const uint8_t *input,size_t size){
-	usb_cdc.rx_interrupt_task(input, size);
+	//usb_cdc.rx_interrupt_task(input, size);
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if (htim == &htim14){
     	usb_cdc.tx_interrupt_task();
-
-    	CanFrame tx_frame;
-    	tx_frame.id = 0x200;
-    	auto writer = tx_frame.writer();
-
-    	for(int i = 0; i < 4; i++){
-    		int16_t duty = (int16_t)(motor.at(i).get_pwm() * 10000.0f);
-    		writer.write<uint8_t>(duty>>8);
-    		writer.write<uint8_t>(duty&0xFF);
-    	}
-
-    	can_c6x0.tx(tx_frame);
-
-    	LED_R.out_as_gpio_toggle();
-    	HAL_GPIO_WritePin(RM_LED1_GPIO_Port,RM_LED1_Pin,GPIO_PIN_RESET);
-    	HAL_GPIO_WritePin(RM_LED2_GPIO_Port,RM_LED2_Pin,GPIO_PIN_RESET);
-    	HAL_GPIO_WritePin(RM_LED3_GPIO_Port,RM_LED3_Pin,GPIO_PIN_RESET);
-    	HAL_GPIO_WritePin(RM_LED4_GPIO_Port,RM_LED4_Pin,GPIO_PIN_RESET);
+    	send_motor_parameters();
     }
 }
 
@@ -177,24 +118,10 @@ int main(void)
   MX_TIM5_Init();
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
-  can_main.start();
-  can_main.set_filter_free(16);
-  can_c6x0.start();
-  can_c6x0.set_filter_free(0);
-  LED_R.start();
-  LED_G.start();
-  LED_B.start();
 
   HAL_TIM_Base_Start_IT(&htim14);
 
-  char str[64] = {0};
-
-  for(int i = 0; i<4; i++){
-	  motor.at(i).set_speed_gain(0.2f, 0.002, 0);
-	  motor.at(i).set_position_gain(1.0f, 0.001, 0);
-	  motor.at(i).set_speed_limit(-1.0,1.0);
-  }
-
+  init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -204,55 +131,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
-	  for(int i = 0; i < 4; i++){
-		  motor.at(i).set_control_mode(ControlMode::POSITION_MODE);
-		  motor.at(i).set_target_position(-0.3f);
-		  motor.at(i).set_speed_limit(-0.2,0.2);
-
-//		  motor[i].set_control_mode(ControlMode::SPEED_MODE);
-//		  motor[i].set_target_speed(0.5f);
-
-//		  motor[i].set_control_mode(ControlMode::PWM_MODE);
-//		  motor[i].set_pwm(0.05f);
-	  }
-	  HAL_Delay(1000);
-
-	  for(int i = 0; i < 4; i++){
-		  motor.at(i).set_control_mode(ControlMode::POSITION_MODE);
-		  motor.at(i).set_target_position(0.3f);
-		  motor.at(i).set_speed_limit(-0.1,0.1);
-
-//		  motor[i].set_control_mode(ControlMode::SPEED_MODE);
-//		  motor[i].set_target_speed(-0.2f);
-
-//		  motor[i].set_control_mode(ControlMode::PWM_MODE);
-//		  motor[i].set_pwm(-0.05f);
-	  }
-	  HAL_Delay(2000);
-
-//
-//	  motor[1].set_control_mode(ControlMode::SPEED_MODE);
-//	  motor[1].set_target_speed(0.5f);
-
-//	  motor[0].set_control_mode(ControlMode::PWM_MODE);
-//	  motor[0].set_pwm(0.05f);
-
-//	  sprintf(str,"mode:%d,pwm:%4.3f,speed:%4.3f,target_speed:%4.3f\r\n",
-//			  (int)motor.get_control_mode(),motor.get_pwm(),motor.get_current_speed(),motor.get_target_speed());
-//	  usb_cdc.tx((uint8_t*)str,strlen(str));
-
-//	  HAL_Delay(1);
-//	  sprintf(str,"angle:%d,speed:%d\r\n",motor_state.angle,motor_state.speed);
-//	  usb_cdc.tx((uint8_t*)str,strlen(str));
-
-//	  sprintf(str,"%4.3f,%4.3f,%4.3f,%4.3f\r\n",
-//			  motor[0].get_pwm(),motor[0].get_current_speed(),motor[0].get_target_speed(),motor[0].get_current_position());
-	  sprintf(str,"%4.3f,%4.3f,%4.3f,%4.3f\r\n",motor_state.at(0).rad,motor_state.at(0).speed,motor_state.at(1).rad,motor_state.at(1).speed);
-
-	  usb_cdc.tx((uint8_t*)str,strlen(str));
-	  LED_G.out_as_gpio_toggle();
-	  HAL_Delay(2);
+	  main_comm_prossess();
   }
   /* USER CODE END 3 */
 }

@@ -15,15 +15,15 @@ namespace G24_STM32HAL::RmcLib{
 class PID{
 private:
 	const float pid_freq;
-	float kp = 0;
-	float ki = 0;
-	float kd = 0;
+	float kp;
+	float ki;
+	float kd;
 	float error = 0;
 	float error_sum = 0;
 	float old_error = 0;
 
 	//anti windup
-	float k_anti_windup = 0;
+	float k_anti_windup;
 	const bool enable_anti_windup = false;
 	float limit_min;
 	float limit_max;
@@ -31,7 +31,7 @@ public:
 	PID(float _pid_freq = 1.0f,float _kp = 0.0f,float _ki = 0.0f,float _kd = 0.0f, bool anti_windup = false,float _limit_min = 0.0f,float _limit_max = 0.0f):
 		pid_freq(_pid_freq),kp(_kp),ki(_ki),kd(_kd),
 		enable_anti_windup(anti_windup),limit_min(_limit_min),limit_max(_limit_max),
-		k_anti_windup(1/kp){}
+		k_anti_windup((kp != 0.0f) ? 1/kp : 0){}
 
 	float operator()(float target,float feedback);
 
