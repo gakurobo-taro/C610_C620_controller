@@ -115,20 +115,23 @@ namespace G24_STM32HAL::RmcBoard{
 
 	//メインCANの処理（外部との通信）
 	void main_comm_prossess(void){
-		  for(int i = 0; i < 4; i++){
-			  driver.at(i).set_control_mode(RmcLib::ControlMode::POSITION_MODE);
-			  driver.at(i).set_target_position(-0.3f);
-			  driver.at(i).set_speed_limit(-0.2,0.2);
-		  }
-		  HAL_Delay(1000);
 
-		  for(int i = 0; i < 4; i++){
-			  driver.at(i).set_control_mode(RmcLib::ControlMode::POSITION_MODE);
-			  driver.at(i).set_target_position(0.3f);
-			  driver.at(i).set_speed_limit(-0.1,0.1);
-		  }
-		  HAL_Delay(2000);
+	}
 
+	void test(void){
+		for(int i = 0; i < 4; i++){
+			driver.at(i).set_control_mode(RmcLib::ControlMode::POSITION_MODE);
+			driver.at(i).set_target_position(-0.3f);
+			driver.at(i).set_speed_limit(-0.2,0.2);
+		}
+		HAL_Delay(1000);
+
+		for(int i = 0; i < 4; i++){
+			driver.at(i).set_control_mode(RmcLib::ControlMode::POSITION_MODE);
+			driver.at(i).set_target_position(0.3f);
+			driver.at(i).set_speed_limit(-0.1,0.1);
+		}
+		HAL_Delay(2000);
 	}
 
 

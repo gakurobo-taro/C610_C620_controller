@@ -132,6 +132,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  main_comm_prossess();
+	  test();
   }
   /* USER CODE END 3 */
 }
