@@ -183,8 +183,9 @@ int main(void)
 
   char str[64] = {0};
 
-  motor.set_speed_gain(0.2f, 0.005, 0);
+  motor.set_speed_gain(0.2f, 0.002, 0);
   motor.set_position_gain(1.0f, 0.001, 0);
+  motor.set_speed_limit(-1.0,1.0);
 
   /* USER CODE END 2 */
 
@@ -197,13 +198,13 @@ int main(void)
     /* USER CODE BEGIN 3 */
 
 	  motor.set_control_mode(ControlMode::POSITION_MODE);
-	  motor.set_target_position(10.0f);
+	  motor.set_target_position(-10.0f);
 
 //	  motor.set_control_mode(ControlMode::SPEED_MODE);
-//	  motor.set_target_speed(0.1f);
+//	  motor.set_target_speed(1.0f);
 
 //	  motor.set_control_mode(ControlMode::PWM_MODE);
-//	  motor.set_pwm(0.01f);
+//	  motor.set_pwm(0.05f);
 
 //	  sprintf(str,"mode:%d,pwm:%4.3f,speed:%4.3f,target_speed:%4.3f\r\n",
 //			  (int)motor.get_control_mode(),motor.get_pwm(),motor.get_current_speed(),motor.get_target_speed());
@@ -213,9 +214,9 @@ int main(void)
 //	  sprintf(str,"angle:%d,speed:%d\r\n",motor_state.angle,motor_state.speed);
 //	  usb_cdc.tx((uint8_t*)str,strlen(str));
 
-//	  sprintf(str,"%4.3f,%4.3f,%4.3f,%4.3f\r\n",
-//			  motor.get_pwm(),motor.get_current_speed(),motor.get_target_speed(),motor.get_current_position());
-	  sprintf(str,"%4.3f,%4.3f\r\n",motor_state.rad,motor_state.speed);
+	  sprintf(str,"%4.3f,%4.3f,%4.3f,%4.3f\r\n",
+			  motor.get_pwm(),motor.get_current_speed(),motor.get_target_speed(),motor.get_current_position());
+//	  sprintf(str,"%4.3f,%4.3f\r\n",motor_state.rad,motor_state.speed);
 
 	  usb_cdc.tx((uint8_t*)str,strlen(str));
 	  LED_G.out_as_gpio_toggle();

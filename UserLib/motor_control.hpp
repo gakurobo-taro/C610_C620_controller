@@ -61,9 +61,8 @@ namespace G24_STM32HAL::RmcLib{
 		float target_rad;
 		MotorState state;
 
-		PID speed_pid = PID{1,-1,1};
-		PID position_pid = PID{1,-260,260};
-
+		PID speed_pid = PIDBuilder(1).set_limit(-1,1).build();
+		PID position_pid = PIDBuilder(1).set_limit(-7,7).build();
 	public:
 		//mode setting
 		void set_control_mode(ControlMode _mode){ mode = _mode; }
@@ -75,12 +74,14 @@ namespace G24_STM32HAL::RmcLib{
 
 		//speed control
 		void set_speed_gain(float kp,float ki,float kd){speed_pid.set_gain(kp, ki, kd);}
+		void set_pwm_limit(float min,float max){speed_pid.set_limit(min, max);}
 		void set_target_speed(float rad_per_sec){ target_speed = rad_per_sec; }
 		float get_target_speed(void){return target_speed; }
 		float get_current_speed(void){return state.speed;}
 
 		//position control
 		void set_position_gain(float kp,float ki,float kd){position_pid.set_gain(kp, ki, kd);}
+		void set_speed_limit(float min,float max){position_pid.set_limit(min, max);}
 		void set_target_position(float rad){target_rad = rad;}
 		float get_target_position(void){ return target_rad; }
 		float get_current_position(void){return state.rad;}
