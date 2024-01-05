@@ -37,7 +37,7 @@ namespace G24_STM32HAL::RmcLib{
 		const float ks;
 	public:
 		AngleEncoder encoder;
-		C6x0State(float _gear_ratio):
+		C6x0State(float _gear_ratio = 1):
 			gear_ratio(_gear_ratio),ks(2*M_PI/(gear_ratio*360.0f)),
 			encoder(gear_ratio,13){}
 
