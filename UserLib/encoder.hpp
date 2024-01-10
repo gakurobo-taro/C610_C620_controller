@@ -21,7 +21,6 @@ namespace G24_STM32HAL::RmcLib{
 
 	class AngleEncoder : public IEncoder{
 	private:
-		const float gear_ratio;
 		const size_t resolution_bit;
 		const size_t resolution;
 		const float angle_to_rad;
@@ -32,11 +31,10 @@ namespace G24_STM32HAL::RmcLib{
 		int turn_count;
 
 	public:
-		AngleEncoder(float _gear_ratio,size_t _resolution_bit):
-			gear_ratio(_gear_ratio),
+		AngleEncoder(size_t _resolution_bit):
 			resolution_bit(_resolution_bit),
 			resolution(1<<resolution_bit),
-			angle_to_rad(2*M_PI/(resolution*gear_ratio)),
+			angle_to_rad(2*M_PI/resolution),
 			rad_to_angle(1/angle_to_rad){}
 
 

@@ -17,7 +17,7 @@
 
 namespace G24_STM32HAL::RmcLib{
 
-	enum class ControlMode{
+	enum class ControlMode:uint8_t{
 		PWM_MODE,
 		SPEED_MODE,
 		POSITION_MODE,
@@ -33,23 +33,29 @@ namespace G24_STM32HAL::RmcLib{
 
 	struct C6x0State:MotorState{
 	private:
-		const float gear_ratio;
-		const float ks;
-	public:
+		float gear_ratio;
+		float gear_ratio_inv;
+		float ks;
 		AngleEncoder encoder;
+	public:
 		C6x0State(float _gear_ratio = 1):
-			gear_ratio(_gear_ratio),ks(2*M_PI/(gear_ratio*360.0f)),
-			encoder(gear_ratio,13){}
+			gear_ratio(_gear_ratio),gear_ratio_inv(1/_gear_ratio),
+			ks(2*M_PI/(gear_ratio*360.0f)),encoder(13){}
 
 		bool update(CommonLib::CanFrame frame){
 			if(frame.is_ext_id || frame.is_remote || frame.data_length != 8 || !(0x200&frame.id)){
 				return false;
 			}
-			rad = encoder.update_angle(frame.data[0]<<8 | frame.data[1]);
+			rad = encoder.update_angle(frame.data[0]<<8 | frame.data[1])*gear_ratio_inv;
 			speed = (float)(int16_t)(frame.data[2]<<8 | frame.data[3]) * ks;
 			current = (float)(frame.data[4]<<8 | frame.data[5]);
 			temperature = (float)frame.data[6];
 			return true;
+		}
+		void set_gear_ratio(float ratio){
+			gear_ratio = ratio;
+			gear_ratio_inv = 1/ratio;
+			ks = 2*M_PI/(gear_ratio*360.0f);
 		}
 	};
 
@@ -73,18 +79,22 @@ namespace G24_STM32HAL::RmcLib{
 		float get_pwm(void){ return pwm; }
 
 		//speed control
-		void set_speed_gain(float kp,float ki,float kd){speed_pid.set_gain(kp, ki, kd);}
+		void set_speed_gain(const PIDGain &gain){speed_pid.set_gain(gain);}
 		void set_pwm_limit(float min,float max){speed_pid.set_limit(min, max);}
+		void set_pwm_limit(float max){speed_pid.set_limit(-max, max);}
 		void set_target_speed(float rad_per_sec){ target_speed = rad_per_sec; }
 		float get_target_speed(void){return target_speed; }
 		float get_current_speed(void){return state.speed;}
+		PIDGain get_speed_gain(void){return speed_pid.get_gain();}
 
 		//position control
-		void set_position_gain(float kp,float ki,float kd){position_pid.set_gain(kp, ki, kd);}
+		void set_position_gain(const PIDGain &gain){position_pid.set_gain(gain);}
 		void set_speed_limit(float min,float max){position_pid.set_limit(min, max);}
+		void set_speed_limit(float max){position_pid.set_limit(-max, max);}
 		void set_target_position(float rad){target_rad = rad;}
 		float get_target_position(void){ return target_rad; }
 		float get_current_position(void){return state.rad;}
+		PIDGain get_position_gain(void){return position_pid.get_gain();}
 
 		//pid operation
 		float update_operation_val(const MotorState &_state);

@@ -14,12 +14,12 @@ namespace G24_STM32HAL::RmcLib{
 
 	float PID::operator() (float target,float feedback){
 		error = target - feedback;
-		float p = error * kp;
+		float p = error * gain.kp;
 
 		error_sum += error;
-		float i = error_sum * ki;
+		float i = error_sum * gain.ki;
 
-		float d = (error - old_error) * kd;
+		float d = (error - old_error) * gain.kd;
 		old_error = error;
 
 		if(enable_anti_windup){

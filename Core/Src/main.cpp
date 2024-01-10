@@ -70,14 +70,19 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan){
 }
 
 void usb_cdc_rx_callback(const uint8_t *input,size_t size){
-	//usb_cdc.rx_interrupt_task(input, size);
+	usb_cdc.rx_interrupt_task(input, size);
 }
 
+int count = 100;
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if (htim == &htim14){
     	usb_cdc.tx_interrupt_task();
     	send_motor_parameters();
+    }
+    if(htim == &htim13){
+    	//__HAL_TIM_SET_AUTORELOAD(&htim13, count);
+    	LED_B.out_as_gpio_toggle();
     }
 }
 
@@ -117,11 +122,16 @@ int main(void)
   MX_I2C3_Init();
   MX_TIM5_Init();
   MX_TIM14_Init();
+  MX_TIM13_Init();
   /* USER CODE BEGIN 2 */
 
   HAL_TIM_Base_Start_IT(&htim14);
+  HAL_TIM_Base_Start_IT(&htim13);
 
   init();
+
+  uint32_t state;
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -131,8 +141,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  main_comm_prossess();
-	  test();
+	  //main_comm_prossess();
+	  //test();
   }
   /* USER CODE END 3 */
 }

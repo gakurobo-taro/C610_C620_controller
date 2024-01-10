@@ -12,12 +12,16 @@
 
 namespace G24_STM32HAL::RmcLib{
 
-class PID{
-private:
-	const float pid_freq;
+struct PIDGain{
 	float kp;
 	float ki;
 	float kd;
+};
+
+class PID{
+private:
+	const float pid_freq;
+	PIDGain gain;
 	float error = 0;
 	float error_sum = 0;
 	float old_error = 0;
@@ -28,26 +32,27 @@ private:
 	float limit_min;
 	float limit_max;
 public:
-	PID(float _pid_freq = 1.0f,float _kp = 0.0f,float _ki = 0.0f,float _kd = 0.0f, bool anti_windup = false,float _limit_min = 0.0f,float _limit_max = 0.0f):
-		pid_freq(_pid_freq),kp(_kp),ki(_ki),kd(_kd),
+	PID(float _pid_freq,PIDGain _gain={0.0f,0.0f,0.0f}, bool anti_windup = false,float _limit_min = 0.0f,float _limit_max = 0.0f):
+		pid_freq(_pid_freq),gain(_gain),
 		enable_anti_windup(anti_windup),limit_min(_limit_min),limit_max(_limit_max),
-		k_anti_windup((kp != 0.0f) ? 1/kp : 0){}
+		k_anti_windup((gain.kp != 0.0f) ? 1/gain.kp : 0){}
 
 	float operator()(float target,float feedback);
 
 	//inline functions
-	void set_gain(float _kp,float _ki,float _kd){
-		kp = _kp;
+	void set_gain(const PIDGain &_gain){
+		gain.kp = _gain.kp;
 
-		ki = _ki/pid_freq;
-		kd = _kd*pid_freq;
+		gain.ki= _gain.ki/pid_freq;
+		gain.kd = _gain.kd*pid_freq;
 
 		if(enable_anti_windup){
-			k_anti_windup = 1/kp;
+			k_anti_windup = 1/gain.kp;
 		}else{
 			k_anti_windup = 0;
 		}
 	}
+	PIDGain get_gain(void){return gain;}
 	void set_limit(float _limit_min,float _limit_max){
 		limit_min = _limit_min;
 		limit_max = _limit_max;
@@ -63,18 +68,20 @@ public:
 class PIDBuilder{
 public:
 	float freq = 1.0f;
-	float kp = 0.0f;
-	float ki = 0.0f;
-	float kd = 0.0f;
+	PIDGain gain = {0,0,0};
 	float limit_max = 0.0f;
 	float limit_min = 0.0f;
 	bool enable_anti_windup= false;
 
 	PIDBuilder(float _freq = 1.0f):freq(_freq){}
-	PIDBuilder& set_gain(float _kp,float _ki, float _kd){
-		kp = _kp;
-		ki = _ki;
-		kd = _kd;
+	PIDBuilder& set_gain(PIDGain _gain){
+		gain = _gain;
+		return *this;
+	}
+	PIDBuilder& set_gain(float kp,float ki,float kd){
+		gain.kp = kp;
+		gain.ki = ki;
+		gain.kd = kd;
 		return *this;
 	}
 	PIDBuilder& set_limit(float _limit_min,float _limit_max){
@@ -84,7 +91,7 @@ public:
 		return *this;
 	}
 	PID build()const{
-		return PID{freq,kp,ki,kd,enable_anti_windup,limit_min,limit_max};
+		return PID{freq,gain,enable_anti_windup,limit_min,limit_max};
 	}
 };
 
