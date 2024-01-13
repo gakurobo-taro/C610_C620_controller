@@ -59,6 +59,8 @@ void usb_cdc_rx_callback(const uint8_t *input,size_t size);
 #define USE_CAN
 void SystemClock_Config(void);
 
+#define MOTOR_DEBUG
+
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

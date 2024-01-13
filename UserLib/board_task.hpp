@@ -88,7 +88,7 @@ namespace G24_STM32HAL::RmcBoard{
 	void execute_rmc_command(const CommonLib::DataPacket &data);
 	void execute_common_command(const CommonLib::DataPacket &data);
 
-	int monitor_task(void);
+	void monitor_task(void);
 
 
 #ifdef MOTOR_DEBUG

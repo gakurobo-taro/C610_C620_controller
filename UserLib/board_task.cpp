@@ -27,10 +27,10 @@ namespace G24_STM32HAL::RmcBoard{
 		LED_G.start();
 		LED_B.start();
 
-		for(auto d:driver){
-			d.set_speed_gain({0.2f, 0.002, 0});
-			d.set_position_gain({1.0f, 0.001, 0});
-			d.set_speed_limit(-1.0,1.0);
+		for(auto &d:driver){
+			d.set_speed_gain({0.2f, 0.002f, 0.0f});
+			d.set_position_gain({1.0f, 0.001f, 0.0f});
+			d.set_speed_limit(-1.0f,1.0f);
 		}
 	}
 
@@ -62,7 +62,7 @@ namespace G24_STM32HAL::RmcBoard{
 		}
 
 		can_c6x0.tx(tx_frame);
-		for(auto l:LED){
+		for(auto &l:LED){
 			HAL_GPIO_WritePin(l.port,l.pin,GPIO_PIN_RESET);
 		}
 	}
@@ -86,17 +86,14 @@ namespace G24_STM32HAL::RmcBoard{
 		}
 
 		if(data_received && id == rx_data.board_ID && rx_data.data_type == CommonLib::DataType::RMC_DATA){
-			LED_R.out_as_gpio_toggle();
 			execute_rmc_command(rx_data);
 		}else if(data_received && id == rx_data.board_ID && rx_data.data_type == CommonLib::DataType::COMMON_DATA){
-			LED_G.out_as_gpio_toggle();
 			execute_common_command(rx_data);
 		}else if(data_received && rx_data.data_type == CommonLib::DataType::COMMON_DATA){
-			LED_G.out_as_gpio_toggle();
 			execute_common_command(rx_data);
 		}
 	}
-	void execute_rmc_command(CommonLib::DataPacket &data){
+	void execute_rmc_command(const CommonLib::DataPacket &data){
 		RmcReg reg_id = (RmcReg)(data.register_ID & 0xFF);
 		uint16_t motor_id = data.register_ID >> 8;
 
@@ -301,23 +298,30 @@ namespace G24_STM32HAL::RmcBoard{
 			}
 		}
 	}
-	int monitor_task(void){
-		int next_period = 0;
-		return next_period;
+	void monitor_task(void){
+
 	}
+
 #ifdef MOTOR_DEBUG
-	void test(void){
-		for(int i = 0; i < 4; i++){
-			driver.at(i).set_control_mode(RmcLib::ControlMode::POSITION_MODE);
-			driver.at(i).set_target_position(-0.3f);
-			driver.at(i).set_speed_limit(-0.2,0.2);
+	void motor_test(void){
+		char str[64]={0};
+		for(auto &d:driver){
+			d.set_control_mode(RmcLib::ControlMode::POSITION_MODE);
+			d.set_target_position(-0.3f);
+			d.set_speed_limit(-0.2,0.2);
+
+//			driver.at(i).set_control_mode(RmcLib::ControlMode::PWM_MODE);
+//			driver.at(i).set_pwm(0.1);
 		}
 		HAL_Delay(1000);
 
-		for(int i = 0; i < 4; i++){
-			driver.at(i).set_control_mode(RmcLib::ControlMode::POSITION_MODE);
-			driver.at(i).set_target_position(0.3f);
-			driver.at(i).set_speed_limit(-0.1,0.1);
+		for(auto &d:driver){
+			d.set_control_mode(RmcLib::ControlMode::POSITION_MODE);
+			d.set_target_position(0.3f);
+			d.set_speed_limit(-0.1,0.1);
+
+//			d.set_control_mode(RmcLib::ControlMode::PWM_MODE);
+//			d.set_pwm(0.1);
 		}
 		HAL_Delay(2000);
 	}

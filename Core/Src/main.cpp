@@ -130,8 +130,6 @@ int main(void)
 
   init();
 
-  uint32_t state;
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -141,8 +139,19 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  //main_comm_prossess();
-	  //test();
+	  main_comm_prossess();
+
+//	  G24_STM32HAL::CommonLib::DataPacket data;
+//	  data.board_ID = read_board_id();
+//	  data.is_request = false;
+//	  data.data_type = G24_STM32HAL::CommonLib::DataType::RMC_DATA;
+//	  data.register_ID = 0x11;
+//	  auto writer = data.writer();
+//	  writer.write<float>(0.01f);
+//	  execute_rmc_command(data);
+//	  HAL_Delay(100);
+
+	  //motor_test();
   }
   /* USER CODE END 3 */
 }
