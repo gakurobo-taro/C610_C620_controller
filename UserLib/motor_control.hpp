@@ -57,7 +57,7 @@ namespace G24_STM32HAL::RmcLib{
 			gear_ratio_inv = 1/ratio;
 			ks = 2*M_PI/(gear_ratio*360.0f);
 		}
-		float get_gear_ratio(void){
+		float get_gear_ratio(void)const{
 			return gear_ratio;
 		}
 	};
@@ -88,18 +88,18 @@ namespace G24_STM32HAL::RmcLib{
 		void set_pwm_limit(float min,float max){speed_pid.set_limit(min, max);}
 		void set_pwm_limit(float max){speed_pid.set_limit(-max, max);}
 		void set_target_speed(float rad_per_sec){ target_speed = rad_per_sec; }
-		float get_target_speed(void){return target_speed; }
-		float get_current_speed(void){return state.speed;}
-		PIDGain get_speed_gain(void){return speed_pid.get_gain();}
+		float get_target_speed(void)const{return target_speed; }
+		float get_current_speed(void)const{return state.speed;}
+		PIDGain get_speed_gain(void)const{return speed_pid.get_gain();}
 
 		//position control
 		void set_position_gain(const PIDGain &gain){position_pid.set_gain(gain);}
 		void set_speed_limit(float min,float max){position_pid.set_limit(min, max);}
 		void set_speed_limit(float max){position_pid.set_limit(-max, max);}
 		void set_target_position(float rad){target_rad = rad + origin;}
-		float get_target_position(void){ return target_rad - origin; }
-		float get_current_position(void){return state.rad - origin;}
-		PIDGain get_position_gain(void){return position_pid.get_gain();}
+		float get_target_position(void)const{ return target_rad - origin; }
+		float get_current_position(void)const{return state.rad - origin;}
+		PIDGain get_position_gain(void)const{return position_pid.get_gain();}
 
 		//pid operation
 		float update_operation_val(const MotorState &_state);

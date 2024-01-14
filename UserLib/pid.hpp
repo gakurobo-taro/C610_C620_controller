@@ -52,7 +52,7 @@ public:
 			k_anti_windup = 0;
 		}
 	}
-	PIDGain get_gain(void){return gain;}
+	PIDGain get_gain(void)const{return gain;}
 	void set_limit(float _limit_min,float _limit_max){
 		limit_min = _limit_min;
 		limit_max = _limit_max;

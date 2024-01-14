@@ -82,7 +82,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     }
     if(htim == &htim13){
     	//__HAL_TIM_SET_AUTORELOAD(&htim13, count);
-    	LED_B.out_as_gpio_toggle();
     }
 }
 
@@ -126,7 +125,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   HAL_TIM_Base_Start_IT(&htim14);
-  HAL_TIM_Base_Start_IT(&htim13);
+  //HAL_TIM_Base_Start_IT(&htim13);
 
   init();
 

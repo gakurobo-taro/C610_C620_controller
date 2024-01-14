@@ -77,21 +77,22 @@ namespace G24_STM32HAL::RmcBoard{
 			CommonLib::CanFrame rx_frame;
 			can_main.rx(rx_frame);
 			CommonLib::DataConvert::decode_can_frame(rx_frame, rx_data);
-			CommPort data_from = CommPort::CAN_MAIN;
+			data_from = CommPort::CAN_MAIN;
 		}else if(usb_cdc.rx_available()){
 			uint8_t rx_bytes[64] = {0};
 			CommonLib::CanFrame rx_frame;
 			usb_cdc.rx(rx_bytes, sizeof(rx_bytes));
 			CommonLib::DataConvert::slcan_to_can((char*)rx_bytes, rx_frame);
 			CommonLib::DataConvert::decode_can_frame(rx_frame, rx_data);
-			CommPort data_from = CommPort::CDC;
+			data_from = CommPort::CDC;
 		}
 
 		if(data_from != CommPort::NO_DATA && id == rx_data.board_ID && rx_data.data_type == CommonLib::DataType::RMC_DATA){
 			if(rx_data.is_request){
+				LED_R.out_as_gpio_toggle();
 				CommonLib::DataPacket tx_data;
-
 				if(read_rmc_command(rx_data,tx_data)){
+
 					uint8_t tx_bytes[64]={0};
 					CommonLib::CanFrame tx_frame;
 					switch(data_from){
@@ -109,6 +110,7 @@ namespace G24_STM32HAL::RmcBoard{
 					}
 				}
 			}else{
+				LED_G.out_as_gpio_toggle();
 				write_rmc_command(rx_data);
 			}
 		}else if(data_from != CommPort::NO_DATA && id == rx_data.board_ID && rx_data.data_type == CommonLib::DataType::COMMON_DATA){
