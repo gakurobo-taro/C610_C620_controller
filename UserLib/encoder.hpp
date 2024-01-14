@@ -14,8 +14,6 @@ namespace G24_STM32HAL::RmcLib{
 
 	class IEncoder{
 	public:
-		//指定したangleを指定したradとして解釈する（現在の角度(angle)を0(rad)としろ的な）
-		virtual void set_angle_bias(uint16_t angle,float rad) = 0;
 		virtual float get_rad(void) = 0;
 	};
 
@@ -26,21 +24,17 @@ namespace G24_STM32HAL::RmcLib{
 		const float angle_to_rad;
 		const float rad_to_angle;
 
-		uint16_t origin;
 		uint16_t raw_angle;
-		int turn_count;
+		int turn_count = 0;
 
 	public:
 		AngleEncoder(size_t _resolution_bit):
 			resolution_bit(_resolution_bit),
 			resolution(1<<resolution_bit),
 			angle_to_rad(2*M_PI/resolution),
-			rad_to_angle(1/angle_to_rad){}
-
-
-		void set_angle_bias(uint16_t angle,float rad)override{
-			origin = angle + rad*rad_to_angle;
+			rad_to_angle(1/angle_to_rad){
 		}
+
 		float get_rad(void)override{
 			return angle_to_rad*(raw_angle + turn_count*(int)resolution);
 		}

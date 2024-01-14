@@ -69,204 +69,327 @@ namespace G24_STM32HAL::RmcBoard{
 
 	//メインCANの処理（外部との通信）
 	void main_comm_prossess(void){
-		bool data_received = false;
 		int id = read_board_id();
 		CommonLib::DataPacket rx_data;
+		CommPort data_from = CommPort::NO_DATA;
 
 		if(can_main.rx_available()){
 			CommonLib::CanFrame rx_frame;
 			can_main.rx(rx_frame);
 			CommonLib::DataConvert::decode_can_frame(rx_frame, rx_data);
-			data_received = true;
-		}else if(usb_cdc.rx_avilable()){
+			CommPort data_from = CommPort::CAN_MAIN;
+		}else if(usb_cdc.rx_available()){
 			uint8_t rx_bytes[64] = {0};
+			CommonLib::CanFrame rx_frame;
 			usb_cdc.rx(rx_bytes, sizeof(rx_bytes));
-			CommonLib::DataConvert::decode_COBS_bytes(rx_bytes, rx_data);
-			data_received = true;
+			CommonLib::DataConvert::slcan_to_can((char*)rx_bytes, rx_frame);
+			CommonLib::DataConvert::decode_can_frame(rx_frame, rx_data);
+			CommPort data_from = CommPort::CDC;
 		}
 
-		if(data_received && id == rx_data.board_ID && rx_data.data_type == CommonLib::DataType::RMC_DATA){
-			execute_rmc_command(rx_data);
-		}else if(data_received && id == rx_data.board_ID && rx_data.data_type == CommonLib::DataType::COMMON_DATA){
+		if(data_from != CommPort::NO_DATA && id == rx_data.board_ID && rx_data.data_type == CommonLib::DataType::RMC_DATA){
+			if(rx_data.is_request){
+				CommonLib::DataPacket tx_data;
+
+				if(read_rmc_command(rx_data,tx_data)){
+					uint8_t tx_bytes[64]={0};
+					CommonLib::CanFrame tx_frame;
+					switch(data_from){
+					case CommPort::NO_DATA:
+						//nop
+						break;
+					case CommPort::CAN_MAIN:
+						CommonLib::DataConvert::encode_can_frame(tx_data,tx_frame);
+						can_main.tx(tx_frame);
+						break;
+					case CommPort::CDC:
+						CommonLib::DataConvert::encode_can_frame(tx_data,tx_frame);
+						CommonLib::DataConvert::can_to_slcan(tx_frame,(char*)tx_bytes);
+						usb_cdc.tx(tx_bytes, strlen((char*)tx_bytes));
+					}
+				}
+			}else{
+				write_rmc_command(rx_data);
+			}
+		}else if(data_from != CommPort::NO_DATA && id == rx_data.board_ID && rx_data.data_type == CommonLib::DataType::COMMON_DATA){
 			execute_common_command(rx_data);
-		}else if(data_received && rx_data.data_type == CommonLib::DataType::COMMON_DATA){
+		}else if(data_from != CommPort::NO_DATA && rx_data.data_type == CommonLib::DataType::COMMON_DATA){
 			execute_common_command(rx_data);
 		}
 	}
-	void execute_rmc_command(const CommonLib::DataPacket &data){
+
+	bool write_rmc_command(const CommonLib::DataPacket &data){
 		RmcReg reg_id = (RmcReg)(data.register_ID & 0xFF);
 		uint16_t motor_id = data.register_ID >> 8;
 
-		//read
-		if(data.is_request){
-			CommonLib::DataPacket return_data;
-			switch(reg_id){
-			case RmcReg::NOP:
-				//nop
-				break;
-			case RmcReg::MOTOR_TYPE:
-				//TODO:PWMの最大値が変わるが正直現状誤差なので放置しちゃった
-				break;
-			case RmcReg::CONTROL_TYPE:
+		CommonLib::ByteReader reader = data.reader();
+		std::optional<float> fval;
+		std::optional<uint8_t> u8val;
+		std::optional<uint16_t> u16val;
+		std::optional<uint64_t> u64val;
+		RmcLib::PIDGain tmp_gain;
 
-				break;
-			case RmcReg::MOTOR_STATE:
-				break;
-			case RmcReg::PWM:
-				break;
-			case RmcReg::PWM_TARGET:
-				break;
-			case RmcReg::SPD:
-				break;
-			case RmcReg::PWM_LIM:
-				break;
-			case RmcReg::SPD_GAIN_P:
-				break;
-			case RmcReg::SPD_GAIN_I:
-				break;
-			case RmcReg::SPD_GAIN_D:
-				break;
-			case RmcReg::MONITOR_PERIOD:
-				break;
-			case RmcReg::MONITOR_REG1:
-				break;
-			case RmcReg::MONITOR_REG2:
-				break;
-			case RmcReg::MONITOR_REG3:
-				break;
-			case RmcReg::MONITOR_REG4:
-				break;
-			default:
-				break;
+		switch(reg_id){
+		case RmcReg::NOP:
+			//nop
+			return false;
+			break;
+
+		case RmcReg::MOTOR_TYPE:
+			return false;
+			break;
+
+		case RmcReg::CONTROL_TYPE:
+			u8val = reader.read<uint8_t>();
+			if(u8val.has_value()){
+				driver.at(motor_id).set_control_mode((RmcLib::ControlMode)u8val.value());
+			}else{
+				return false;
 			}
+			break;
 
-
-		//write
-		}else{
-			CommonLib::ByteReader reader = data.reader();
-			std::optional<float> fval;
-			std::optional<uint8_t> u8val;
-			std::optional<uint16_t> u16val;
-			std::optional<uint64_t> u64val;
-			RmcLib::PIDGain tmp_gain;
-
-			switch(reg_id){
-			case RmcReg::NOP:
-				//nop
-				break;
-
-			case RmcReg::MOTOR_TYPE:
-				break;
-
-			case RmcReg::CONTROL_TYPE:
-				u8val = reader.read<uint8_t>();
-				if(u8val.has_value()) driver.at(motor_id).set_control_mode((RmcLib::ControlMode)u8val.value());
-				break;
-
-			case RmcReg::GEAR_RATIO:
-				fval = reader.read<float>();
-				if(fval.has_value()) motor_state.at(motor_id).set_gear_ratio(fval.has_value());
-				break;
-
-			case RmcReg::MOTOR_STATE:
-				break;
-
-			case RmcReg::PWM:
-				//nop
-				break;
-
-			case RmcReg::PWM_TARGET:
-				fval = reader.read<float>();
-				if(fval.has_value()) driver.at(motor_id).set_pwm(fval.value());
-				break;
-
-			case RmcReg::SPD:
-				//nop
-				break;
-
-			case RmcReg::PWM_LIM:
-				fval = reader.read<float>();
-				if(fval.has_value()) driver.at(motor_id).set_pwm_limit(fval.value());
-				break;
-
-			case RmcReg::SPD_GAIN_P:
-				fval = reader.read<float>();
-				if(fval.has_value()){
-					tmp_gain = driver.at(motor_id).get_speed_gain();
-					tmp_gain.kp = fval.value();
-					driver.at(motor_id).set_speed_gain(tmp_gain);
-				}
-				break;
-
-			case RmcReg::SPD_GAIN_I:
-				fval = reader.read<float>();
-				if(fval.has_value()){
-					tmp_gain = driver.at(motor_id).get_speed_gain();
-					tmp_gain.ki = fval.value();
-					driver.at(motor_id).set_speed_gain(tmp_gain);
-				}
-				break;
-
-			case RmcReg::SPD_GAIN_D:
-				fval = reader.read<float>();
-				if(fval.has_value()){
-					tmp_gain = driver.at(motor_id).get_speed_gain();
-					tmp_gain.kd = fval.value();
-					driver.at(motor_id).set_speed_gain(tmp_gain);
-				}
-				break;
-
-			case RmcReg::POS:
-				//nop
-				break;
-			case RmcReg::SPD_LIM:
-				fval = reader.read<float>();
-				if(fval.has_value()) driver.at(motor_id).set_speed_limit(fval.value());
-				break;
-			case RmcReg::POS_TARGET:
-				fval = reader.read<float>();
-				if(fval.has_value()) driver.at(motor_id).set_target_position(fval.value());
-				break;
-			case RmcReg::POS_GAIN_P:
-				fval = reader.read<float>();
-				if(fval.has_value()){
-					tmp_gain = driver.at(motor_id).get_position_gain();
-					tmp_gain.kp = fval.value();
-					driver.at(motor_id).set_speed_gain(tmp_gain);
-				}
-				break;
-			case RmcReg::POS_GAIN_I:
-				fval = reader.read<float>();
-				if(fval.has_value()){
-					tmp_gain = driver.at(motor_id).get_position_gain();
-					tmp_gain.ki = fval.value();
-					driver.at(motor_id).set_speed_gain(tmp_gain);
-				}
-				break;
-			case RmcReg::POS_GAIN_D:
-				fval = reader.read<float>();
-				if(fval.has_value()){
-					tmp_gain = driver.at(motor_id).get_position_gain();
-					tmp_gain.kd = fval.value();
-					driver.at(motor_id).set_speed_gain(tmp_gain);
-				}
-				break;
-
-			case RmcReg::MONITOR_PERIOD:
-				break;
-			case RmcReg::MONITOR_REG1:
-				break;
-			case RmcReg::MONITOR_REG2:
-				break;
-			case RmcReg::MONITOR_REG3:
-				break;
-			case RmcReg::MONITOR_REG4:
-				break;
-			default:
-				break;
+		case RmcReg::GEAR_RATIO:
+			fval = reader.read<float>();
+			if(fval.has_value()){
+				motor_state.at(motor_id).set_gear_ratio(fval.has_value());
+			}else{
+				return false;
 			}
+			break;
+
+		case RmcReg::MOTOR_STATE:
+			return false;
+			break;
+
+		case RmcReg::PWM:
+			//nop
+			return false;
+			break;
+
+		case RmcReg::PWM_TARGET:
+			fval = reader.read<float>();
+			if(fval.has_value()){
+				driver.at(motor_id).set_pwm(fval.value());
+			}else{
+				return false;
+			}
+			break;
+
+		case RmcReg::SPD:
+			//nop
+			break;
+
+		case RmcReg::SPD_TARGET:
+			fval = reader.read<float>();
+			if(fval.has_value()){
+				driver.at(motor_id).set_target_speed(fval.value());
+			}else{
+				return false;
+			}
+			break;
+
+		case RmcReg::PWM_LIM:
+			fval = reader.read<float>();
+			if(fval.has_value()){
+				driver.at(motor_id).set_pwm_limit(fval.value());
+			}else{
+				return false;
+			}
+			break;
+
+		case RmcReg::SPD_GAIN_P:
+			fval = reader.read<float>();
+			if(fval.has_value()){
+				tmp_gain = driver.at(motor_id).get_speed_gain();
+				tmp_gain.kp = fval.value();
+				driver.at(motor_id).set_speed_gain(tmp_gain);
+			}else{
+
+			}
+			break;
+
+		case RmcReg::SPD_GAIN_I:
+			fval = reader.read<float>();
+			if(fval.has_value()){
+				tmp_gain = driver.at(motor_id).get_speed_gain();
+				tmp_gain.ki = fval.value();
+				driver.at(motor_id).set_speed_gain(tmp_gain);
+			}else{
+				return false;
+			}
+			break;
+
+		case RmcReg::SPD_GAIN_D:
+			fval = reader.read<float>();
+			if(fval.has_value()){
+				tmp_gain = driver.at(motor_id).get_speed_gain();
+				tmp_gain.kd = fval.value();
+				driver.at(motor_id).set_speed_gain(tmp_gain);
+			}else{
+				return false;
+			}
+			break;
+
+		case RmcReg::POS:
+			fval = reader.read<float>();
+			if(fval.has_value()){
+				float current_angle = driver.at(motor_id).get_current_position();
+				driver.at(motor_id).set_origin(current_angle - fval.value());
+			}else{
+				return false;
+			}
+			break;
+		case RmcReg::POS_TARGET:
+			fval = reader.read<float>();
+			if(fval.has_value()){
+				driver.at(motor_id).set_target_position(fval.value());
+			}else {
+				return false;
+			}
+			break;
+		case RmcReg::SPD_LIM:
+			fval = reader.read<float>();
+			if(fval.has_value()){
+				driver.at(motor_id).set_speed_limit(fval.value());
+			}else{
+				return false;
+			}
+			break;
+		case RmcReg::POS_GAIN_P:
+			fval = reader.read<float>();
+			if(fval.has_value()){
+				tmp_gain = driver.at(motor_id).get_position_gain();
+				tmp_gain.kp = fval.value();
+				driver.at(motor_id).set_speed_gain(tmp_gain);
+			}else{
+				return false;
+			}
+			break;
+		case RmcReg::POS_GAIN_I:
+			fval = reader.read<float>();
+			if(fval.has_value()){
+				tmp_gain = driver.at(motor_id).get_position_gain();
+				tmp_gain.ki = fval.value();
+				driver.at(motor_id).set_speed_gain(tmp_gain);
+			}else{
+				return false;
+			}
+			break;
+		case RmcReg::POS_GAIN_D:
+			fval = reader.read<float>();
+			if(fval.has_value()){
+				tmp_gain = driver.at(motor_id).get_position_gain();
+				tmp_gain.kd = fval.value();
+				driver.at(motor_id).set_speed_gain(tmp_gain);
+			}else{
+				return false;
+			}
+			break;
+
+		case RmcReg::MONITOR_PERIOD:
+			break;
+		case RmcReg::MONITOR_REG1:
+			break;
+		case RmcReg::MONITOR_REG2:
+			break;
+		case RmcReg::MONITOR_REG3:
+			break;
+		case RmcReg::MONITOR_REG4:
+			break;
+		default:
+			return false;
+			break;
 		}
+		return true;
 	}
+
+	bool read_rmc_command(const CommonLib::DataPacket &data,CommonLib::DataPacket &return_data){
+		CommonLib::ByteWriter writer = return_data.writer();
+		RmcReg reg_id = (RmcReg)(data.register_ID & 0xFF);
+		uint16_t motor_id = data.register_ID >> 8;
+
+		return_data = data;
+		return_data.is_request = false;
+
+		switch(reg_id){
+		case RmcReg::NOP:
+			//nop
+			return false;
+			break;
+		case RmcReg::MOTOR_TYPE:
+			//TODO:PWMの最大値が変わるが正直現状誤差なので放置しちゃった
+			return false;
+			break;
+		case RmcReg::CONTROL_TYPE:
+			writer.write((uint8_t)driver.at(motor_id).get_control_mode());
+			break;
+		case RmcReg::GEAR_RATIO:
+			writer.write(motor_state.at(motor_id).get_gear_ratio());
+			break;
+		case RmcReg::MOTOR_STATE:
+			//TODO::実装
+			return false;
+			break;
+		case RmcReg::PWM:
+			writer.write(driver.at(motor_id).get_pwm());
+			break;
+		case RmcReg::PWM_TARGET:
+			writer.write(driver.at(motor_id).get_pwm());
+			break;
+		case RmcReg::SPD:
+			writer.write(driver.at(motor_id).get_current_speed());
+			break;
+		case RmcReg::SPD_TARGET:
+			writer.write(driver.at(motor_id).get_target_speed());
+		case RmcReg::PWM_LIM:
+			//TODO:実装　消してもいいかもしれん
+			return false;
+			break;
+		case RmcReg::SPD_GAIN_P:
+			writer.write<float>(driver.at(motor_id).get_speed_gain().kp);
+			break;
+		case RmcReg::SPD_GAIN_I:
+			writer.write<float>(driver.at(motor_id).get_speed_gain().ki);
+			break;
+		case RmcReg::SPD_GAIN_D:
+			writer.write<float>(driver.at(motor_id).get_speed_gain().kd);
+			break;
+		case RmcReg::POS:
+			writer.write(driver.at(motor_id).get_current_position());
+			break;
+		case RmcReg::POS_TARGET:
+			writer.write(driver.at(motor_id).get_target_position());
+			break;
+		case RmcReg::SPD_LIM:
+			//TODO:実装　消してもいいかもしれん
+			return false;
+			break;
+		case RmcReg::POS_GAIN_P:
+			writer.write<float>(driver.at(motor_id).get_position_gain().kp);
+			break;
+		case RmcReg::POS_GAIN_I:
+			writer.write<float>(driver.at(motor_id).get_position_gain().ki);
+			break;
+		case RmcReg::POS_GAIN_D:
+			writer.write<float>(driver.at(motor_id).get_position_gain().kd);
+			break;
+		case RmcReg::MONITOR_PERIOD:
+			break;
+		case RmcReg::MONITOR_REG1:
+			break;
+		case RmcReg::MONITOR_REG2:
+			break;
+		case RmcReg::MONITOR_REG3:
+			break;
+		case RmcReg::MONITOR_REG4:
+			break;
+		default:
+			break;
+			return false;
+		}
+		return true;
+	}
+
 	void execute_common_command(const CommonLib::DataPacket &data){
 		CommonReg reg_id = (CommonReg)data.register_ID;
 

@@ -53,6 +53,13 @@ namespace G24_STM32HAL::RmcBoard{
 		MONITOR_REG3,
 		MONITOR_REG4,
 	};
+
+	enum class CommPort{
+		NO_DATA,
+		CAN_MAIN,
+		CAN_SUB,
+		CDC,
+	};
 }
 
 

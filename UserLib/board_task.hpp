@@ -85,7 +85,8 @@ namespace G24_STM32HAL::RmcBoard{
 
 	//メインCANの処理（外部との通信）
 	void main_comm_prossess(void);
-	void execute_rmc_command(const CommonLib::DataPacket &data);
+	bool write_rmc_command(const CommonLib::DataPacket &data);
+	bool read_rmc_command(const CommonLib::DataPacket &data,CommonLib::DataPacket &return_data);
 	void execute_common_command(const CommonLib::DataPacket &data);
 
 	void monitor_task(void);

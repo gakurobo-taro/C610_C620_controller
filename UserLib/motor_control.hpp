@@ -57,6 +57,9 @@ namespace G24_STM32HAL::RmcLib{
 			gear_ratio_inv = 1/ratio;
 			ks = 2*M_PI/(gear_ratio*360.0f);
 		}
+		float get_gear_ratio(void){
+			return gear_ratio;
+		}
 	};
 
 	class MotorDriver{
@@ -65,6 +68,7 @@ namespace G24_STM32HAL::RmcLib{
 		float pwm;
 		float target_speed;
 		float target_rad;
+		float origin;
 		MotorState state;
 
 		PID speed_pid = PIDBuilder(1).set_limit(-1,1).build();
@@ -73,6 +77,7 @@ namespace G24_STM32HAL::RmcLib{
 		//mode setting
 		void set_control_mode(ControlMode _mode){ mode = _mode; }
 		ControlMode get_control_mode(void){ return mode; }
+		void set_origin(float origin_rad){origin = origin_rad;}
 
 		//pwm control
 		void set_pwm(float _pwm){ pwm = std::clamp(_pwm,-1.0f,1.0f); }
@@ -91,9 +96,9 @@ namespace G24_STM32HAL::RmcLib{
 		void set_position_gain(const PIDGain &gain){position_pid.set_gain(gain);}
 		void set_speed_limit(float min,float max){position_pid.set_limit(min, max);}
 		void set_speed_limit(float max){position_pid.set_limit(-max, max);}
-		void set_target_position(float rad){target_rad = rad;}
-		float get_target_position(void){ return target_rad; }
-		float get_current_position(void){return state.rad;}
+		void set_target_position(float rad){target_rad = rad + origin;}
+		float get_target_position(void){ return target_rad - origin; }
+		float get_current_position(void){return state.rad - origin;}
 		PIDGain get_position_gain(void){return position_pid.get_gain();}
 
 		//pid operation
