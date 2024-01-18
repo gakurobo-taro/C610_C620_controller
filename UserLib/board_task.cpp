@@ -105,7 +105,7 @@ namespace G24_STM32HAL::RmcBoard{
 						break;
 					case CommPort::CDC:
 						CommonLib::DataConvert::encode_can_frame(tx_data,tx_frame);
-						CommonLib::DataConvert::can_to_slcan(tx_frame,(char*)tx_bytes);
+						CommonLib::DataConvert::can_to_slcan(tx_frame,(char*)tx_bytes,sizeof(tx_bytes));
 						usb_cdc.tx(tx_bytes, strlen((char*)tx_bytes));
 					}
 				}
