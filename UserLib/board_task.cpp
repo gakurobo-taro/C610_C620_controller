@@ -30,8 +30,8 @@ namespace G24_STM32HAL::RmcBoard{
 		LED_R.out_as_gpio(true);
 
 		for(auto &d:driver){
-			d.set_speed_gain({0.2f, 0.002f, 0.0f});
-			d.set_position_gain({1.0f, 0.001f, 0.0f});
+			d.set_speed_gain({0.2f, 0.1f, 0.0f});
+			d.set_position_gain({1.0f, 0.5f, 0.0f});
 			d.set_speed_limit(-1.0f,1.0f);
 		}
 	}

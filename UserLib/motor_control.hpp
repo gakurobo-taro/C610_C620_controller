@@ -71,8 +71,8 @@ namespace G24_STM32HAL::RmcLib{
 		float origin;
 		MotorState state;
 
-		PID speed_pid = PIDBuilder(1).set_limit(-1,1).build();
-		PID position_pid = PIDBuilder(1).set_limit(-7,7).build();
+		PID speed_pid = PIDBuilder(1000.0f).set_limit(-1.0f,1.0f).build();
+		PID position_pid = PIDBuilder(1000.0f).set_limit(-7.0f,7.0f).build();
 	public:
 		//mode setting
 		void set_control_mode(ControlMode _mode);

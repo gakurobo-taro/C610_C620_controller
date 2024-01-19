@@ -52,7 +52,13 @@ public:
 			k_anti_windup = 0;
 		}
 	}
-	PIDGain get_gain(void)const{return gain;}
+	PIDGain get_gain(void)const{
+		PIDGain _gain;
+		_gain = gain;
+		_gain.ki = gain.ki*pid_freq;
+		_gain.kd = gain.kd/pid_freq;
+		return _gain;
+	}
 	void set_limit(float _limit_min,float _limit_max){
 		limit_min = _limit_min;
 		limit_max = _limit_max;
@@ -80,8 +86,8 @@ public:
 	}
 	PIDBuilder& set_gain(float kp,float ki,float kd){
 		gain.kp = kp;
-		gain.ki = ki;
-		gain.kd = kd;
+		gain.ki = ki*freq;
+		gain.kd = kd/freq;
 		return *this;
 	}
 	PIDBuilder& set_limit(float _limit_min,float _limit_max){
