@@ -235,7 +235,7 @@ namespace G24_STM32HAL::RmcBoard{
 		case RmcReg::POS:
 			fval = reader.read<float>();
 			if(fval.has_value()){
-				float current_angle = driver.at(motor_id).get_current_position();
+				float current_angle = driver.at(motor_id).get_current_low_position();
 				driver.at(motor_id).set_origin(current_angle - fval.value());
 			}else{
 				return false;

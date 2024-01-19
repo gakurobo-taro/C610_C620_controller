@@ -75,7 +75,7 @@ namespace G24_STM32HAL::RmcLib{
 		PID position_pid = PIDBuilder(1).set_limit(-7,7).build();
 	public:
 		//mode setting
-		void set_control_mode(ControlMode _mode){ mode = _mode; }
+		void set_control_mode(ControlMode _mode);
 		ControlMode get_control_mode(void){ return mode; }
 		void set_origin(float origin_rad){origin = origin_rad;}
 
@@ -97,8 +97,10 @@ namespace G24_STM32HAL::RmcLib{
 		void set_speed_limit(float min,float max){position_pid.set_limit(min, max);}
 		void set_speed_limit(float max){position_pid.set_limit(-max, max);}
 		void set_target_position(float rad){target_rad = rad + origin;}
+		void set_target_low_position(float rad){target_rad = rad ;}
 		float get_target_position(void)const{ return target_rad - origin; }
 		float get_current_position(void)const{return state.rad - origin;}
+		float get_current_low_position(void)const{return state.rad; }
 		PIDGain get_position_gain(void)const{return position_pid.get_gain();}
 
 		//pid operation
