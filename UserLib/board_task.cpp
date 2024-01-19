@@ -27,6 +27,8 @@ namespace G24_STM32HAL::RmcBoard{
 		LED_G.start();
 		LED_B.start();
 
+		LED_R.out_as_gpio(true);
+
 		for(auto &d:driver){
 			d.set_speed_gain({0.2f, 0.002f, 0.0f});
 			d.set_position_gain({1.0f, 0.001f, 0.0f});
@@ -89,7 +91,7 @@ namespace G24_STM32HAL::RmcBoard{
 
 		if(data_from != CommPort::NO_DATA && id == rx_data.board_ID && rx_data.data_type == CommonLib::DataType::RMC_DATA){
 			if(rx_data.is_request){
-				LED_R.out_as_gpio_toggle();
+				LED_R.out_as_gpio(true);
 				CommonLib::DataPacket tx_data;
 				if(read_rmc_command(rx_data,tx_data)){
 
@@ -110,7 +112,7 @@ namespace G24_STM32HAL::RmcBoard{
 					}
 				}
 			}else{
-				LED_G.out_as_gpio_toggle();
+				LED_G.out_as_gpio(true);
 				write_rmc_command(rx_data);
 			}
 		}else if(data_from != CommPort::NO_DATA && id == rx_data.board_ID && rx_data.data_type == CommonLib::DataType::COMMON_DATA){
@@ -118,6 +120,8 @@ namespace G24_STM32HAL::RmcBoard{
 		}else if(data_from != CommPort::NO_DATA && rx_data.data_type == CommonLib::DataType::COMMON_DATA){
 			execute_common_command(rx_data);
 		}
+		LED_R.out_as_gpio(false);
+		LED_G.out_as_gpio(false);
 	}
 
 	bool write_rmc_command(const CommonLib::DataPacket &data){
@@ -262,7 +266,7 @@ namespace G24_STM32HAL::RmcBoard{
 			if(fval.has_value()){
 				tmp_gain = driver.at(motor_id).get_position_gain();
 				tmp_gain.kp = fval.value();
-				driver.at(motor_id).set_speed_gain(tmp_gain);
+				driver.at(motor_id).set_position_gain(tmp_gain);
 			}else{
 				return false;
 			}
@@ -272,7 +276,7 @@ namespace G24_STM32HAL::RmcBoard{
 			if(fval.has_value()){
 				tmp_gain = driver.at(motor_id).get_position_gain();
 				tmp_gain.ki = fval.value();
-				driver.at(motor_id).set_speed_gain(tmp_gain);
+				driver.at(motor_id).set_position_gain(tmp_gain);
 			}else{
 				return false;
 			}
@@ -282,7 +286,7 @@ namespace G24_STM32HAL::RmcBoard{
 			if(fval.has_value()){
 				tmp_gain = driver.at(motor_id).get_position_gain();
 				tmp_gain.kd = fval.value();
-				driver.at(motor_id).set_speed_gain(tmp_gain);
+				driver.at(motor_id).set_position_gain(tmp_gain);
 			}else{
 				return false;
 			}
