@@ -11,6 +11,7 @@
 #include "board_info.hpp"
 
 #include "motor_control.hpp"
+#include "monitor_management.hpp"
 #include "STM32HAL_CommonLib/can_comm.hpp"
 #include "STM32HAL_CommonLib/pwm.hpp"
 #include "STM32HAL_CommonLib/data_packet.hpp"
@@ -60,8 +61,8 @@ namespace G24_STM32HAL::RmcBoard{
 	inline CommonLib::CanComm can_c6x0 = CommonLib::CanComm(&hcan1,CAN_RX_FIFO0,CAN_FILTER_FIFO0,CAN_IT_RX_FIFO0_MSG_PENDING);
 
 	//motors
-	inline std::array<RmcLib::MotorDriver,4> driver;
-	inline std::array<RmcLib::C6x0State,4> motor_state{
+	inline std::array<RmcLib::MotorDriver,MOTOR_N> driver;
+	inline std::array<RmcLib::C6x0State,MOTOR_N> motor_state{
 		RmcLib::C6x0State{36.0f},
 		RmcLib::C6x0State{36.0f},
 		RmcLib::C6x0State{36.0f},
@@ -70,6 +71,10 @@ namespace G24_STM32HAL::RmcBoard{
 
 	//usb
 	inline CommonLib::UsbCdcComm usb_cdc = CommonLib::UsbCdcComm{&hUsbDeviceFS};
+
+	//monitor
+	inline std::array<RmcLib::MonitorManagement<4>,MOTOR_N> monitor;
+	inline bool monitor_enable = true;
 
 	//functions
 	uint8_t read_board_id(void);
@@ -90,7 +95,6 @@ namespace G24_STM32HAL::RmcBoard{
 	void execute_common_command(const CommonLib::DataPacket &data);
 
 	void monitor_task(void);
-
 
 #ifdef MOTOR_DEBUG
 	void motor_test(void);

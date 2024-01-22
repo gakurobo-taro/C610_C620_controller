@@ -73,15 +73,15 @@ void usb_cdc_rx_callback(const uint8_t *input,size_t size){
 	usb_cdc.rx_interrupt_task(input, size);
 }
 
-int count = 100;
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if (htim == &htim14){
     	usb_cdc.tx_interrupt_task();
     	send_motor_parameters();
     }
-    if(htim == &htim13){
-    	//__HAL_TIM_SET_AUTORELOAD(&htim13, count);
+    if((htim == &htim13) && monitor_enable){
+    	LED_R.out_as_gpio_toggle();
+    	monitor_task();
     }
 }
 
@@ -123,11 +123,13 @@ int main(void)
   MX_TIM14_Init();
   MX_TIM13_Init();
   /* USER CODE BEGIN 2 */
+  init();
 
   HAL_TIM_Base_Start_IT(&htim14);
-  //HAL_TIM_Base_Start_IT(&htim13);
+  HAL_TIM_Base_Start_IT(&htim13);
+  __HAL_TIM_SET_AUTORELOAD(&htim13, 1000);
 
-  init();
+  monitor[1].set_register(0, 281479271677952);
 
   /* USER CODE END 2 */
 

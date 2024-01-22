@@ -293,14 +293,42 @@ namespace G24_STM32HAL::RmcBoard{
 			break;
 
 		case RmcReg::MONITOR_PERIOD:
+			u16val = reader.read<uint16_t>();
+			if(u16val.has_value()){
+				if(u16val.value() == 0){
+					monitor_enable = false;
+				}else{
+					monitor_enable = true;
+					LED_B.out_as_gpio_toggle();
+
+					__HAL_TIM_SET_AUTORELOAD(&htim13,u16val.value()*2);
+					__HAL_TIM_SET_COUNTER(&htim13,0);
+				}
+			}
 			break;
 		case RmcReg::MONITOR_REG1:
+			u64val = reader.read<uint64_t>();
+			if(u64val.has_value()){
+				monitor.at(motor_id).set_register(0, u64val.value());
+			}
 			break;
 		case RmcReg::MONITOR_REG2:
+			u64val = reader.read<uint64_t>();
+			if(u64val.has_value()){
+				monitor.at(motor_id).set_register(1, u64val.value());
+			}
 			break;
 		case RmcReg::MONITOR_REG3:
+			u64val = reader.read<uint64_t>();
+			if(u64val.has_value()){
+				monitor.at(motor_id).set_register(2, u64val.value());
+			}
 			break;
 		case RmcReg::MONITOR_REG4:
+			u64val = reader.read<uint64_t>();
+			if(u64val.has_value()){
+				monitor.at(motor_id).set_register(3, u64val.value());
+			}
 			break;
 		default:
 			return false;
@@ -347,6 +375,7 @@ namespace G24_STM32HAL::RmcBoard{
 			break;
 		case RmcReg::SPD_TARGET:
 			writer.write(driver.at(motor_id).get_target_speed());
+			break;
 		case RmcReg::PWM_LIM:
 			//TODO:実装　消してもいいかもしれん
 			return false;
@@ -380,18 +409,27 @@ namespace G24_STM32HAL::RmcBoard{
 			writer.write<float>(driver.at(motor_id).get_position_gain().kd);
 			break;
 		case RmcReg::MONITOR_PERIOD:
+			if(monitor_enable){
+				writer.write<uint16_t>(__HAL_TIM_GET_AUTORELOAD(&htim13)/2);
+			}else{
+				writer.write<uint16_t>(0);
+			}
 			break;
 		case RmcReg::MONITOR_REG1:
+			writer.write<uint64_t>(monitor.at(motor_id).get_register(0));
 			break;
 		case RmcReg::MONITOR_REG2:
+			writer.write<uint64_t>(monitor.at(motor_id).get_register(1));
 			break;
 		case RmcReg::MONITOR_REG3:
+			writer.write<uint64_t>(monitor.at(motor_id).get_register(2));
 			break;
 		case RmcReg::MONITOR_REG4:
+			writer.write<uint64_t>(monitor.at(motor_id).get_register(3));
 			break;
 		default:
-			break;
 			return false;
+			break;
 		}
 		return true;
 	}
@@ -427,13 +465,31 @@ namespace G24_STM32HAL::RmcBoard{
 			}
 		}
 	}
-	void monitor_task(void){
 
+	void monitor_task(void){
+		for(size_t motor_n = 0; motor_n < MOTOR_N; motor_n++){
+			for(size_t reg_n = 0; reg_n < 64; reg_n ++){
+				if(monitor[motor_n].is_requested_to_monitor(reg_n)){
+					CommonLib::DataPacket tmp_packet;
+					CommonLib::DataPacket tx_packet;
+					CommonLib::CanFrame tx_frame;
+
+					tmp_packet.board_ID = read_board_id();
+					tmp_packet.data_type = CommonLib::DataType::RMC_DATA;
+					tmp_packet.register_ID = (motor_n << 8) | reg_n;
+
+					if(read_rmc_command(tmp_packet,tx_packet)){
+						CommonLib::DataConvert::encode_can_frame(tx_packet, tx_frame);
+						can_main.tx(tx_frame);
+					}
+				}
+			}
+		}
 	}
+
 
 #ifdef MOTOR_DEBUG
 	void motor_test(void){
-		char str[64]={0};
 		for(auto &d:driver){
 			d.set_control_mode(RmcLib::ControlMode::POSITION_MODE);
 			d.set_target_position(-0.3f);
