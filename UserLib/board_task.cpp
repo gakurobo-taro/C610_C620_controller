@@ -81,10 +81,10 @@ namespace G24_STM32HAL::RmcBoard{
 			CommonLib::DataConvert::decode_can_frame(rx_frame, rx_data);
 			data_from = CommPort::CAN_MAIN;
 		}else if(usb_cdc.rx_available()){
-			uint8_t rx_bytes[64] = {0};
+			CommonLib::SerialData rx_serial;
 			CommonLib::CanFrame rx_frame;
-			usb_cdc.rx(rx_bytes, sizeof(rx_bytes));
-			CommonLib::DataConvert::slcan_to_can((char*)rx_bytes, rx_frame);
+			usb_cdc.rx(rx_serial);
+			CommonLib::DataConvert::slcan_to_can((char*)rx_serial.data, rx_frame);
 			CommonLib::DataConvert::decode_can_frame(rx_frame, rx_data);
 			data_from = CommPort::CDC;
 		}
@@ -95,7 +95,7 @@ namespace G24_STM32HAL::RmcBoard{
 				CommonLib::DataPacket tx_data;
 				if(read_rmc_command(rx_data,tx_data)){
 
-					uint8_t tx_bytes[64]={0};
+					CommonLib::SerialData tx_serial;
 					CommonLib::CanFrame tx_frame;
 					switch(data_from){
 					case CommPort::NO_DATA:
@@ -107,8 +107,8 @@ namespace G24_STM32HAL::RmcBoard{
 						break;
 					case CommPort::CDC:
 						CommonLib::DataConvert::encode_can_frame(tx_data,tx_frame);
-						CommonLib::DataConvert::can_to_slcan(tx_frame,(char*)tx_bytes,sizeof(tx_bytes));
-						usb_cdc.tx(tx_bytes, strlen((char*)tx_bytes));
+						CommonLib::DataConvert::can_to_slcan(tx_frame,(char*)tx_serial.data,tx_serial.max_size);
+						usb_cdc.tx(tx_serial);
 					}
 				}
 			}else{
@@ -299,7 +299,6 @@ namespace G24_STM32HAL::RmcBoard{
 					monitor_enable = false;
 				}else{
 					monitor_enable = true;
-					LED_B.out_as_gpio_toggle();
 
 					__HAL_TIM_SET_AUTORELOAD(&htim13,u16val.value()*2);
 					__HAL_TIM_SET_COUNTER(&htim13,0);
