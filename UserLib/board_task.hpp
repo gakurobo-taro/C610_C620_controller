@@ -74,7 +74,7 @@ namespace G24_STM32HAL::RmcBoard{
 
 	//monitor
 	inline std::array<RmcLib::MonitorManagement<4>,MOTOR_N> monitor;
-	inline bool monitor_enable = true;
+	inline bool monitor_enable = false;
 
 	//functions
 	uint8_t read_board_id(void);
