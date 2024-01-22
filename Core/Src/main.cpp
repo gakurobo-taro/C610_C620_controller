@@ -129,8 +129,6 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim13);
   __HAL_TIM_SET_AUTORELOAD(&htim13, 1000);
 
-  monitor[1].set_register(0, 281479271677952);
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
