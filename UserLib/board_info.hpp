@@ -49,10 +49,7 @@ namespace G24_STM32HAL::RmcBoard{
 		POS_GAIN_D,
 
 		MONITOR_PERIOD = 0xF0,
-		MONITOR_REG1,
-		MONITOR_REG2,
-		MONITOR_REG3,
-		MONITOR_REG4,
+		MONITOR_REG,
 	};
 
 	enum class CommPort{

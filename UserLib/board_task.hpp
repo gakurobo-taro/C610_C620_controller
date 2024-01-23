@@ -11,7 +11,6 @@
 #include "board_info.hpp"
 
 #include "motor_control.hpp"
-#include "monitor_management.hpp"
 #include "STM32HAL_CommonLib/can_comm.hpp"
 #include "STM32HAL_CommonLib/pwm.hpp"
 #include "STM32HAL_CommonLib/data_packet.hpp"
@@ -27,6 +26,7 @@
 
 #include <stdio.h>
 #include <array>
+#include <bitset>
 
 extern USBD_HandleTypeDef hUsbDeviceFS;
 
@@ -73,7 +73,7 @@ namespace G24_STM32HAL::RmcBoard{
 	inline CommonLib::UsbCdcComm usb_cdc = CommonLib::UsbCdcComm{&hUsbDeviceFS};
 
 	//monitor
-	inline std::array<RmcLib::MonitorManagement<4>,MOTOR_N> monitor;
+	inline std::array<std::bitset<0x35>,MOTOR_N> monitor;
 	inline bool monitor_enable = false;
 
 	//functions

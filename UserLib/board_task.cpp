@@ -305,28 +305,10 @@ namespace G24_STM32HAL::RmcBoard{
 				}
 			}
 			break;
-		case RmcReg::MONITOR_REG1:
+		case RmcReg::MONITOR_REG:
 			u64val = reader.read<uint64_t>();
 			if(u64val.has_value()){
-				monitor.at(motor_id).set_register(0, u64val.value());
-			}
-			break;
-		case RmcReg::MONITOR_REG2:
-			u64val = reader.read<uint64_t>();
-			if(u64val.has_value()){
-				monitor.at(motor_id).set_register(1, u64val.value());
-			}
-			break;
-		case RmcReg::MONITOR_REG3:
-			u64val = reader.read<uint64_t>();
-			if(u64val.has_value()){
-				monitor.at(motor_id).set_register(2, u64val.value());
-			}
-			break;
-		case RmcReg::MONITOR_REG4:
-			u64val = reader.read<uint64_t>();
-			if(u64val.has_value()){
-				monitor.at(motor_id).set_register(3, u64val.value());
+				monitor.at(motor_id) = std::bitset<0x35>(u64val.value());
 			}
 			break;
 		default:
@@ -414,17 +396,8 @@ namespace G24_STM32HAL::RmcBoard{
 				writer.write<uint16_t>(0);
 			}
 			break;
-		case RmcReg::MONITOR_REG1:
-			writer.write<uint64_t>(monitor.at(motor_id).get_register(0));
-			break;
-		case RmcReg::MONITOR_REG2:
-			writer.write<uint64_t>(monitor.at(motor_id).get_register(1));
-			break;
-		case RmcReg::MONITOR_REG3:
-			writer.write<uint64_t>(monitor.at(motor_id).get_register(2));
-			break;
-		case RmcReg::MONITOR_REG4:
-			writer.write<uint64_t>(monitor.at(motor_id).get_register(3));
+		case RmcReg::MONITOR_REG:
+			writer.write<uint64_t>(monitor.at(motor_id).to_ullong());
 			break;
 		default:
 			return false;
@@ -467,8 +440,8 @@ namespace G24_STM32HAL::RmcBoard{
 
 	void monitor_task(void){
 		for(size_t motor_n = 0; motor_n < MOTOR_N; motor_n++){
-			for(size_t reg_n = 0; reg_n < 64; reg_n ++){
-				if(monitor[motor_n].is_requested_to_monitor(reg_n)){
+			for(size_t reg_n = 0; reg_n < monitor[motor_n].size(); reg_n ++){
+				if(monitor[motor_n].test(reg_n)){
 					CommonLib::DataPacket tmp_packet;
 					CommonLib::DataPacket tx_packet;
 					CommonLib::CanFrame tx_frame;
