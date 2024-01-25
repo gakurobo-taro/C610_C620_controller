@@ -62,6 +62,7 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 
 void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan){
+	LED_B.out_as_gpio(true);
 	if(hcan == can_main.get_can_handle()){
 		can_main.tx_interrupt_task();
 	}else if(hcan == can_c6x0.get_can_handle()){
@@ -69,6 +70,7 @@ void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan){
 	}
 }
 void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef *hcan){
+	LED_B.out_as_gpio(true);
 	if(hcan == can_main.get_can_handle()){
 		can_main.tx_interrupt_task();
 	}else if(hcan == can_c6x0.get_can_handle()){
@@ -76,6 +78,7 @@ void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef *hcan){
 	}
 }
 void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef *hcan){
+	LED_B.out_as_gpio(true);
 	if(hcan == can_main.get_can_handle()){
 		can_main.tx_interrupt_task();
 	}else if(hcan == can_c6x0.get_can_handle()){
@@ -98,11 +101,12 @@ void usb_cdc_rx_callback(const uint8_t *input,size_t size){
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if (htim == &htim14){
+    	LED_G.out_as_gpio(true);
     	usb_cdc.tx_interrupt_task();
     	send_motor_parameters();
     }
     if((htim == &htim13) && monitor_enable){
-    	LED_R.out_as_gpio_toggle();
+    	LED_R.out_as_gpio(true);
     	monitor_task();
     }
 }
@@ -161,6 +165,10 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  main_comm_prossess();
+
+	  LED_R.out_as_gpio(false);
+	  LED_G.out_as_gpio(false);
+	  LED_B.out_as_gpio(false);
 
 //	  G24_STM32HAL::CommonLib::DataPacket data;
 //	  data.board_ID = read_board_id();

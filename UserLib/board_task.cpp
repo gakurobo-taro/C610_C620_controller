@@ -30,10 +30,11 @@ namespace G24_STM32HAL::RmcBoard{
 		LED_R.out_as_gpio(true);
 
 		for(auto &d:driver){
-			d.set_speed_gain({0.2f, 0.1f, 0.0f});
+			d.set_speed_gain({0.5f, 0.2f, 0.0f});
 			d.set_position_gain({1.0f, 0.5f, 0.0f});
 			d.set_speed_limit(-1.0f,1.0f);
 		}
+		LED_R.out_as_gpio(false);
 	}
 
 	//受信したモーター情報の処理
@@ -120,8 +121,7 @@ namespace G24_STM32HAL::RmcBoard{
 		}else if(data_from != CommPort::NO_DATA && rx_data.data_type == CommonLib::DataType::COMMON_DATA){
 			execute_common_command(rx_data);
 		}
-		LED_R.out_as_gpio(false);
-		LED_G.out_as_gpio(false);
+
 	}
 
 	bool write_rmc_command(const CommonLib::DataPacket &data){
