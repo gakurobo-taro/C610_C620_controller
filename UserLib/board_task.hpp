@@ -38,31 +38,31 @@ namespace G24_STM32HAL::RmcBoard{
 		GPIOParam(GPIO_TypeDef * _port,uint16_t _pin):port(_port),pin(_pin){}
 	};
 	//LEDs
-	inline CommonLib::PWMHard LED_R = CommonLib::PWMHard{&htim5,TIM_CHANNEL_1};
-	inline CommonLib::PWMHard LED_G = CommonLib::PWMHard{&htim5,TIM_CHANNEL_2};
-	inline CommonLib::PWMHard LED_B = CommonLib::PWMHard{&htim5,TIM_CHANNEL_3};
+	inline auto LED_R = CommonLib::PWMHard{&htim5,TIM_CHANNEL_1};
+	inline auto LED_G = CommonLib::PWMHard{&htim5,TIM_CHANNEL_2};
+	inline auto LED_B = CommonLib::PWMHard{&htim5,TIM_CHANNEL_3};
 
-	inline std::array<GPIOParam,4> LED{
-		GPIOParam(RM_LED1_GPIO_Port,RM_LED1_Pin),
-		GPIOParam(RM_LED2_GPIO_Port,RM_LED2_Pin),
-		GPIOParam(RM_LED3_GPIO_Port,RM_LED3_Pin),
-		GPIOParam(RM_LED4_GPIO_Port,RM_LED4_Pin),
+	inline auto LED = std::array<GPIOParam,4>{
+		GPIOParam{RM_LED1_GPIO_Port,RM_LED1_Pin},
+		GPIOParam{RM_LED2_GPIO_Port,RM_LED2_Pin},
+		GPIOParam{RM_LED3_GPIO_Port,RM_LED3_Pin},
+		GPIOParam{RM_LED4_GPIO_Port,RM_LED4_Pin},
 	};
 
-	inline std::array<GPIOParam,4> dip_sw{
-		GPIOParam(ID0_GPIO_Port,ID0_Pin),
-		GPIOParam(ID1_GPIO_Port,ID1_Pin),
-		GPIOParam(ID2_GPIO_Port,ID2_Pin),
-		GPIOParam(ID3_GPIO_Port,ID3_Pin),
+	inline auto dip_sw = std::array<GPIOParam,4>{
+		GPIOParam{ID0_GPIO_Port,ID0_Pin},
+		GPIOParam{ID1_GPIO_Port,ID1_Pin},
+		GPIOParam{ID2_GPIO_Port,ID2_Pin},
+		GPIOParam{ID3_GPIO_Port,ID3_Pin},
 	};
 
 	//can
-	inline CommonLib::CanComm can_main = CommonLib::CanComm(&hcan2,CAN_RX_FIFO1,CAN_FILTER_FIFO1,CAN_IT_RX_FIFO1_MSG_PENDING);
-	inline CommonLib::CanComm can_c6x0 = CommonLib::CanComm(&hcan1,CAN_RX_FIFO0,CAN_FILTER_FIFO0,CAN_IT_RX_FIFO0_MSG_PENDING);
+	inline auto can_main = CommonLib::CanComm<4,4>{&hcan2,CAN_RX_FIFO1,CAN_FILTER_FIFO1,CAN_IT_RX_FIFO1_MSG_PENDING};
+	inline auto can_c6x0 = CommonLib::CanComm<4,4>{&hcan1,CAN_RX_FIFO0,CAN_FILTER_FIFO0,CAN_IT_RX_FIFO0_MSG_PENDING};
 
 	//motors
-	inline std::array<RmcLib::MotorDriver,MOTOR_N> driver;
-	inline std::array<RmcLib::C6x0State,MOTOR_N> motor_state{
+	inline auto driver = std::array<RmcLib::MotorDriver,MOTOR_N>{};
+	inline auto motor_state = std::array<RmcLib::C6x0State,MOTOR_N>{
 		RmcLib::C6x0State{36.0f},
 		RmcLib::C6x0State{36.0f},
 		RmcLib::C6x0State{36.0f},
@@ -70,10 +70,10 @@ namespace G24_STM32HAL::RmcBoard{
 	};
 
 	//usb
-	inline CommonLib::UsbCdcComm usb_cdc = CommonLib::UsbCdcComm{&hUsbDeviceFS};
+	inline auto usb_cdc = CommonLib::UsbCdcComm<4,4>{&hUsbDeviceFS};
 
 	//monitor
-	inline std::array<std::bitset<0x35>,MOTOR_N> monitor;
+	inline auto monitor = std::array<std::bitset<0x35>,MOTOR_N>{};
 	inline bool monitor_enable = false;
 
 	//functions
