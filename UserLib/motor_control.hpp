@@ -46,8 +46,11 @@ namespace G24_STM32HAL::RmcLib{
 			if(frame.is_ext_id || frame.is_remote || frame.data_length != 8 || !(0x200&frame.id)){
 				return false;
 			}
-			rad = encoder.update_angle(frame.data[0]<<8 | frame.data[1])*gear_ratio_inv;
-			speed = (float)(int16_t)(frame.data[2]<<8 | frame.data[3]) * ks;
+			uint16_t angle = frame.data[0]<<8 | frame.data[1];
+			int16_t angle_speed = frame.data[2]<<8 | frame.data[3];
+
+			rad = encoder.update_angle(angle,angle_speed)*gear_ratio_inv;
+			speed = (float)(int16_t)speed * ks;
 			current = (float)(frame.data[4]<<8 | frame.data[5]);
 			temperature = (float)frame.data[6];
 			return true;

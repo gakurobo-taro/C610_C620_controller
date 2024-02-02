@@ -39,15 +39,19 @@ namespace G24_STM32HAL::RmcLib{
 			return angle_to_rad*(raw_angle + turn_count*(int)resolution);
 		}
 
-		float update_angle(uint16_t angle){
+		float update_angle(uint16_t angle,int16_t speed){
 			angle = angle&(resolution-1);
-			int angle_top2 = angle>>(resolution_bit-2);
-			int old_angle_top2 = raw_angle>>(resolution_bit-2);
+			uint32_t angle_top = angle>>(resolution_bit-1);
+			uint32_t old_angle_top = raw_angle>>(resolution_bit-1);
 
-			if(old_angle_top2  == 3 && angle_top2 == 0){
-				turn_count ++;
-			}else if(old_angle_top2  == 0 && angle_top2 == 3){
-				turn_count --;
+			if(old_angle_top == 1 && angle_top == 0){
+				if(speed > 0){
+					turn_count ++;
+				}
+			}else if(old_angle_top == 0 && angle_top == 1){
+				if(speed < 0){
+					turn_count --;
+				}
 			}
 
 			raw_angle = angle;

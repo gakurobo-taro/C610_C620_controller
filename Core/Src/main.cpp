@@ -29,7 +29,7 @@
 /* USER CODE BEGIN Includes */
 #include "../../UserLib/board_task.hpp"
 
-using namespace G24_STM32HAL::RmcBoard;
+using namespace G24_STM32HAL;
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -62,52 +62,52 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 
 void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan){
-	LED_B.out_as_gpio(true);
-	if(hcan == can_main.get_can_handle()){
-		can_main.tx_interrupt_task();
-	}else if(hcan == can_c6x0.get_can_handle()){
-		can_c6x0.tx_interrupt_task();
+	RmcBoard::LED_B.out_as_gpio(true);
+	if(hcan == RmcBoard::can_main.get_can_handle()){
+		RmcBoard::can_main.tx_interrupt_task();
+	}else if(hcan == RmcBoard::can_c6x0.get_can_handle()){
+		RmcBoard::can_c6x0.tx_interrupt_task();
 	}
 }
 void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef *hcan){
-	LED_B.out_as_gpio(true);
-	if(hcan == can_main.get_can_handle()){
-		can_main.tx_interrupt_task();
-	}else if(hcan == can_c6x0.get_can_handle()){
-		can_c6x0.tx_interrupt_task();
+	RmcBoard::LED_B.out_as_gpio(true);
+	if(hcan == RmcBoard::can_main.get_can_handle()){
+		RmcBoard::can_main.tx_interrupt_task();
+	}else if(hcan == RmcBoard::can_c6x0.get_can_handle()){
+		RmcBoard::can_c6x0.tx_interrupt_task();
 	}
 }
 void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef *hcan){
-	LED_B.out_as_gpio(true);
-	if(hcan == can_main.get_can_handle()){
-		can_main.tx_interrupt_task();
-	}else if(hcan == can_c6x0.get_can_handle()){
-		can_c6x0.tx_interrupt_task();
+	RmcBoard::LED_B.out_as_gpio(true);
+	if(hcan == RmcBoard::can_main.get_can_handle()){
+		RmcBoard::can_main.tx_interrupt_task();
+	}else if(hcan == RmcBoard::can_c6x0.get_can_handle()){
+		RmcBoard::can_c6x0.tx_interrupt_task();
 	}
 }
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
-	can_c6x0.rx_interrupt_task();
-	motor_data_process();
+	RmcBoard::can_c6x0.rx_interrupt_task();
+	RmcBoard::motor_data_process();
 }
 void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan){
-	can_main.rx_interrupt_task();
+	RmcBoard::can_main.rx_interrupt_task();
 }
 
 void usb_cdc_rx_callback(const uint8_t *input,size_t size){
-	usb_cdc.rx_interrupt_task(input, size);
+	RmcBoard::usb_cdc.rx_interrupt_task(input, size);
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if (htim == &htim14){
-    	LED_G.out_as_gpio(true);
-    	usb_cdc.tx_interrupt_task();
-    	send_motor_parameters();
+    	RmcBoard::LED_G.out_as_gpio(true);
+    	RmcBoard::usb_cdc.tx_interrupt_task();
+    	RmcBoard::send_motor_parameters();
     }
-    if((htim == &htim13) && monitor_enable){
-    	LED_R.out_as_gpio(true);
-    	monitor_task();
+    if((htim == &htim13) && RmcBoard::monitor_enable){
+    	RmcBoard::LED_R.out_as_gpio(true);
+    	RmcBoard::monitor_task();
     }
 }
 
@@ -149,11 +149,13 @@ int main(void)
   MX_TIM14_Init();
   MX_TIM13_Init();
   /* USER CODE BEGIN 2 */
-  init();
+  RmcBoard::init();
 
   HAL_TIM_Base_Start_IT(&htim14);
   HAL_TIM_Base_Start_IT(&htim13);
   __HAL_TIM_SET_AUTORELOAD(&htim13, 1000);
+
+
 
   /* USER CODE END 2 */
 
@@ -164,11 +166,17 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  main_comm_prossess();
+	  RmcBoard::main_comm_prossess();
 
-	  LED_R.out_as_gpio(false);
-	  LED_G.out_as_gpio(false);
-	  LED_B.out_as_gpio(false);
+	  RmcBoard::LED_R.out_as_gpio(false);
+	  RmcBoard::LED_G.out_as_gpio(false);
+	  RmcBoard::LED_B.out_as_gpio(false);
+
+//	  CommonLib::SerialData data;
+//	  data.size = sprintf((char*)data.data,"%4.3f\r\n",RmcBoard::driver.at(0).get_current_position());
+//	  RmcBoard::usb_cdc.tx(data);
+//	  HAL_Delay(1);
+
 
 //	  G24_STM32HAL::CommonLib::DataPacket data;
 //	  data.board_ID = read_board_id();

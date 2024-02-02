@@ -157,7 +157,7 @@ namespace G24_STM32HAL::RmcBoard{
 		case RmcReg::GEAR_RATIO:
 			fval = reader.read<float>();
 			if(fval.has_value()){
-				motor_state.at(motor_id).set_gear_ratio(fval.has_value());
+				motor_state.at(motor_id).set_gear_ratio(fval.value());
 			}else{
 				return false;
 			}
