@@ -173,7 +173,9 @@ int main(void)
 	  RmcBoard::LED_B.out_as_gpio(false);
 
 //	  CommonLib::SerialData data;
-//	  data.size = sprintf((char*)data.data,"%4.3f\r\n",RmcBoard::driver.at(0).get_current_position());
+//	  data.size = sprintf((char*)data.data,"%4.3f,%d\r\n",
+//			  RmcBoard::driver.at(0).get_current_position(),
+//			  RmcBoard::motor_state[0].encoder.turn_count);
 //	  RmcBoard::usb_cdc.tx(data);
 //	  HAL_Delay(1);
 

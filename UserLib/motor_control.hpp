@@ -50,7 +50,7 @@ namespace G24_STM32HAL::RmcLib{
 			int16_t angle_speed = frame.data[2]<<8 | frame.data[3];
 
 			rad = encoder.update_angle(angle,angle_speed)*gear_ratio_inv;
-			speed = (float)(int16_t)speed * ks;
+			speed = (float)angle_speed * ks;
 			current = (float)(frame.data[4]<<8 | frame.data[5]);
 			temperature = (float)frame.data[6];
 			return true;
