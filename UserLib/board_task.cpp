@@ -167,6 +167,23 @@ namespace G24_STM32HAL::RmcBoard{
 			return false;
 			break;
 
+		case RmcReg::CAN_TIMEOUT:
+			u16val = reader.read<uint16_t>();
+			if(u16val.has_value()){
+				if(u16val.value() == 0){
+					HAL_TIM_Base_Stop_IT(can_timeout_timer);
+				}else{
+					__HAL_TIM_SET_AUTORELOAD(can_timeout_timer,u16val.value());
+					__HAL_TIM_SET_COUNTER(can_timeout_timer,0);
+
+					if(HAL_TIM_Base_GetState(can_timeout_timer) == HAL_TIM_STATE_READY){
+						HAL_TIM_Base_Start_IT(can_timeout_timer);
+					}
+				}
+			}else{
+				return false;
+			}
+			break;
 		case RmcReg::PWM:
 			//nop
 			return false;
@@ -296,12 +313,14 @@ namespace G24_STM32HAL::RmcBoard{
 			u16val = reader.read<uint16_t>();
 			if(u16val.has_value()){
 				if(u16val.value() == 0){
-					monitor_enable = false;
+					HAL_TIM_Base_Stop_IT(monitor_timer);
 				}else{
-					monitor_enable = true;
+					__HAL_TIM_SET_AUTORELOAD(monitor_timer,u16val.value());
+					__HAL_TIM_SET_COUNTER(monitor_timer,0);
 
-					__HAL_TIM_SET_AUTORELOAD(&htim13,u16val.value()*2);
-					__HAL_TIM_SET_COUNTER(&htim13,0);
+					if(HAL_TIM_Base_GetState(monitor_timer) == HAL_TIM_STATE_READY){
+						HAL_TIM_Base_Start_IT(monitor_timer);
+					}
 				}
 			}
 			break;
@@ -344,6 +363,13 @@ namespace G24_STM32HAL::RmcBoard{
 		case RmcReg::MOTOR_STATE:
 			//TODO::実装
 			return false;
+			break;
+		case RmcReg::CAN_TIMEOUT:
+			if(HAL_TIM_Base_GetState(can_timeout_timer) == HAL_TIM_STATE_BUSY){
+				writer.write<uint16_t>(__HAL_TIM_GET_AUTORELOAD(can_timeout_timer));
+			}else{
+				writer.write<uint16_t>(0);
+			}
 			break;
 		case RmcReg::PWM:
 			writer.write(driver.at(motor_id).get_pwm());
@@ -390,8 +416,8 @@ namespace G24_STM32HAL::RmcBoard{
 			writer.write<float>(driver.at(motor_id).get_position_gain().kd);
 			break;
 		case RmcReg::MONITOR_PERIOD:
-			if(monitor_enable){
-				writer.write<uint16_t>(__HAL_TIM_GET_AUTORELOAD(&htim13)/2);
+			if(HAL_TIM_Base_GetState(monitor_timer) == HAL_TIM_STATE_BUSY){
+				writer.write<uint16_t>(__HAL_TIM_GET_AUTORELOAD(monitor_timer));
 			}else{
 				writer.write<uint16_t>(0);
 			}

@@ -32,6 +32,10 @@ extern USBD_HandleTypeDef hUsbDeviceFS;
 
 namespace G24_STM32HAL::RmcBoard{
 
+	inline auto *motor_control_timer = &htim14;
+	inline auto *monitor_timer = &htim13;
+	inline auto *can_timeout_timer = &htim12;
+
 	struct GPIOParam{
 		GPIO_TypeDef * port;
 		uint16_t pin;
@@ -74,7 +78,6 @@ namespace G24_STM32HAL::RmcBoard{
 
 	//monitor
 	inline auto monitor = std::array<std::bitset<0x35>,MOTOR_N>{};
-	inline bool monitor_enable = false;
 
 	//functions
 	uint8_t read_board_id(void);

@@ -30,6 +30,7 @@ namespace G24_STM32HAL::RmcBoard{
 		CONTROL_TYPE,
 		GEAR_RATIO,
 		MOTOR_STATE,
+		CAN_TIMEOUT,
 
 		PWM = 0x10,
 		PWM_TARGET,
