@@ -116,9 +116,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
     }else if(htim == RmcBoard::can_timeout_timer){
     	RmcBoard::LED_R.out_as_gpio(true);
-    	for(int i = 0; i<5000;i++){
 
-    	}
     }
 }
 
@@ -165,11 +163,9 @@ int main(void)
 
   HAL_TIM_Base_Start_IT(RmcBoard::motor_control_timer);
   //HAL_TIM_Base_Start_IT(RmcBoard::monitor_timer);
-  HAL_TIM_Base_Start_IT(RmcBoard::can_timeout_timer);
+  //HAL_TIM_Base_Start_IT(RmcBoard::can_timeout_timer);
   __HAL_TIM_SET_AUTORELOAD(RmcBoard::monitor_timer, 700);
   __HAL_TIM_SET_AUTORELOAD(RmcBoard::can_timeout_timer, 2000);
-
-
 
   /* USER CODE END 2 */
 
