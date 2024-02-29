@@ -53,6 +53,8 @@ namespace G24_STM32HAL::RmcBoard{
 	inline auto *monitor_timer = &htim13;
 	inline auto *can_timeout_timer = &htim12;
 
+	inline bool timeout_en_flag = false;
+
 	inline auto set_timer_period = [](TIM_HandleTypeDef *tim,uint16_t val){
 		if(val == 0){
 			HAL_TIM_Base_Stop_IT(tim);
@@ -60,7 +62,9 @@ namespace G24_STM32HAL::RmcBoard{
 			__HAL_TIM_SET_AUTORELOAD(tim,val);
 			__HAL_TIM_SET_COUNTER(tim,0);
 
-			if(HAL_TIM_Base_GetState(tim) == HAL_TIM_STATE_READY) HAL_TIM_Base_Start_IT(tim);
+			if(HAL_TIM_Base_GetState(tim) == HAL_TIM_STATE_READY){
+				HAL_TIM_Base_Start_IT(tim);
+			}
 		}
 	};
 	inline auto get_timer_period = [](TIM_HandleTypeDef *tim)->uint16_t{
@@ -75,7 +79,6 @@ namespace G24_STM32HAL::RmcBoard{
 	inline auto LED_R = RmcLib::LEDPWM{&htim5,TIM_CHANNEL_1};
 	inline auto LED_G = RmcLib::LEDPWM{&htim5,TIM_CHANNEL_2};
 	inline auto LED_B = RmcLib::LEDPWM{&htim5,TIM_CHANNEL_3};
-
 
 	inline auto LED = std::array<RmcLib::LEDGPIO,MOTOR_N>{
 		RmcLib::LEDGPIO{RM_LED1_GPIO_Port,RM_LED1_Pin},
@@ -111,7 +114,7 @@ namespace G24_STM32HAL::RmcBoard{
 		CommonLib::IDMapBuilder()
 			.add((uint16_t)RmcReg::CONTROL_TYPE,  CommonLib::DataAccessor::generate<RmcLib::ControlMode>([](RmcLib::ControlMode m){driver[0].set_control_mode(m);},[]()->RmcLib::ControlMode{return driver[0].get_control_mode();}))
 			.add((uint16_t)RmcReg::GEAR_RATIO,    CommonLib::DataAccessor::generate<float>([](float ratio){motor_state[0].set_gear_ratio(ratio);},[]()->float{return motor_state[0].get_gear_ratio();}))
-			.add((uint16_t)RmcReg::CAN_TIMEOUT,   CommonLib::DataAccessor::generate<float>([](uint16_t period){set_timer_period(can_timeout_timer,period);},[]()->uint16_t{return get_timer_period(can_timeout_timer);}))
+			.add((uint16_t)RmcReg::CAN_TIMEOUT,   CommonLib::DataAccessor::generate<uint16_t>([](uint16_t period){timeout_en_flag = false; set_timer_period(can_timeout_timer,period);},[]()->uint16_t{return get_timer_period(can_timeout_timer);}))
 
 			.add((uint16_t)RmcReg::PWM,           CommonLib::DataAccessor::generate<float>([]()->float{return driver[0].get_pwm();}))
 			.add((uint16_t)RmcReg::PWM_TARGET,    CommonLib::DataAccessor::generate<float>([](float pwm){driver[0].set_pwm(pwm);},[]()->float{return driver[0].get_pwm();}))
@@ -137,7 +140,7 @@ namespace G24_STM32HAL::RmcBoard{
 		CommonLib::IDMapBuilder()
 			.add((uint16_t)RmcReg::CONTROL_TYPE,  CommonLib::DataAccessor::generate<RmcLib::ControlMode>([](RmcLib::ControlMode m){driver[1].set_control_mode(m);},[]()->RmcLib::ControlMode{return driver[1].get_control_mode();}))
 			.add((uint16_t)RmcReg::GEAR_RATIO,    CommonLib::DataAccessor::generate<float>([](float ratio){motor_state[1].set_gear_ratio(ratio);},[]()->float{return motor_state[1].get_gear_ratio();}))
-			.add((uint16_t)RmcReg::CAN_TIMEOUT,   CommonLib::DataAccessor::generate<float>([](uint16_t period){set_timer_period(can_timeout_timer,period);},[]()->uint16_t{return get_timer_period(can_timeout_timer);}))
+			.add((uint16_t)RmcReg::CAN_TIMEOUT,   CommonLib::DataAccessor::generate<uint16_t>([](uint16_t period){timeout_en_flag = false; set_timer_period(can_timeout_timer,period);},[]()->uint16_t{return get_timer_period(can_timeout_timer);}))
 
 			.add((uint16_t)RmcReg::PWM,           CommonLib::DataAccessor::generate<float>([]()->float{return driver[1].get_pwm();}))
 			.add((uint16_t)RmcReg::PWM_TARGET,    CommonLib::DataAccessor::generate<float>([](float pwm){driver[1].set_pwm(pwm);},[]()->float{return driver[1].get_pwm();}))
@@ -163,7 +166,7 @@ namespace G24_STM32HAL::RmcBoard{
 		CommonLib::IDMapBuilder()
 			.add((uint16_t)RmcReg::CONTROL_TYPE,  CommonLib::DataAccessor::generate<RmcLib::ControlMode>([](RmcLib::ControlMode m){driver[2].set_control_mode(m);},[]()->RmcLib::ControlMode{return driver[2].get_control_mode();}))
 			.add((uint16_t)RmcReg::GEAR_RATIO,    CommonLib::DataAccessor::generate<float>([](float ratio){motor_state[2].set_gear_ratio(ratio);},[]()->float{return motor_state[2].get_gear_ratio();}))
-			.add((uint16_t)RmcReg::CAN_TIMEOUT,   CommonLib::DataAccessor::generate<float>([](uint16_t period){set_timer_period(can_timeout_timer,period);},[]()->uint16_t{return get_timer_period(can_timeout_timer);}))
+			.add((uint16_t)RmcReg::CAN_TIMEOUT,   CommonLib::DataAccessor::generate<uint16_t>([](uint16_t period){timeout_en_flag = false;set_timer_period(can_timeout_timer,period);},[]()->uint16_t{return get_timer_period(can_timeout_timer);}))
 
 			.add((uint16_t)RmcReg::PWM,           CommonLib::DataAccessor::generate<float>([]()->float{return driver[2].get_pwm();}))
 			.add((uint16_t)RmcReg::PWM_TARGET,    CommonLib::DataAccessor::generate<float>([](float pwm){driver[2].set_pwm(pwm);},[]()->float{return driver[2].get_pwm();}))
@@ -189,7 +192,7 @@ namespace G24_STM32HAL::RmcBoard{
 		CommonLib::IDMapBuilder()
 			.add((uint16_t)RmcReg::CONTROL_TYPE,  CommonLib::DataAccessor::generate<RmcLib::ControlMode>([](RmcLib::ControlMode m){driver[3].set_control_mode(m);},[]()->RmcLib::ControlMode{return driver[3].get_control_mode();}))
 			.add((uint16_t)RmcReg::GEAR_RATIO,    CommonLib::DataAccessor::generate<float>([](float ratio){motor_state[3].set_gear_ratio(ratio);},[]()->float{return motor_state[3].get_gear_ratio();}))
-			.add((uint16_t)RmcReg::CAN_TIMEOUT,   CommonLib::DataAccessor::generate<float>([](uint16_t period){set_timer_period(can_timeout_timer,period);},[]()->uint16_t{return get_timer_period(can_timeout_timer);}))
+			.add((uint16_t)RmcReg::CAN_TIMEOUT,   CommonLib::DataAccessor::generate<uint16_t>([](uint16_t period){timeout_en_flag = false;set_timer_period(can_timeout_timer,period);},[]()->uint16_t{return get_timer_period(can_timeout_timer);}))
 
 			.add((uint16_t)RmcReg::PWM,           CommonLib::DataAccessor::generate<float>([]()->float{return driver[3].get_pwm();}))
 			.add((uint16_t)RmcReg::PWM_TARGET,    CommonLib::DataAccessor::generate<float>([](float pwm){driver[3].set_pwm(pwm);},[]()->float{return driver[3].get_pwm();}))

@@ -89,13 +89,13 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 }
 void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan){
 	RmcBoard::can_main.rx_interrupt_task();
-	__HAL_TIM_SET_COUNTER(&htim12,0);
+	__HAL_TIM_SET_COUNTER(RmcBoard::can_timeout_timer,0);
 	RmcBoard::LED_B.play(RmcLib::LEDPattern::ok);
 }
 
 void usb_cdc_rx_callback(const uint8_t *input,size_t size){
 	RmcBoard::usb_cdc.rx_interrupt_task(input, size);
-	__HAL_TIM_SET_COUNTER(&htim12,0);
+	__HAL_TIM_SET_COUNTER(RmcBoard::can_timeout_timer,0);
 
 	RmcBoard::LED_B.play(RmcLib::LEDPattern::ok);
 }
@@ -121,10 +121,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     	RmcBoard::LED_R.play(RmcLib::LEDPattern::ok);
 
     }else if(htim == RmcBoard::can_timeout_timer){
-    	for(auto &d:RmcBoard::driver){
-    		d.set_control_mode(RmcLib::ControlMode::PWM_MODE);
+    	if(RmcBoard::timeout_en_flag){
+    		for(auto &d:RmcBoard::driver){
+				d.set_control_mode(RmcLib::ControlMode::PWM_MODE);
+			}
+			RmcBoard::LED_R.play(RmcLib::LEDPattern::error);
+    	}else{
+    		RmcBoard::timeout_en_flag = true;
     	}
-    	RmcBoard::LED_R.play(RmcLib::LEDPattern::error);
+
     }
 }
 
