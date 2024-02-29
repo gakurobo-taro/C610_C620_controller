@@ -50,13 +50,16 @@ extern "C" {
 
 /* USER CODE END EM */
 
-void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
-
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
+#define USE_USB_CDC
+void usb_cdc_rx_callback(const uint8_t *input,size_t size);
+#define USE_CAN
 void SystemClock_Config(void);
+
+#define MOTOR_DEBUG
 
 /* USER CODE END EFP */
 
@@ -91,6 +94,7 @@ void SystemClock_Config(void);
 #define I2C_SEL2_GPIO_Port GPIOC
 #define I2C_SEL1_Pin GPIO_PIN_8
 #define I2C_SEL1_GPIO_Port GPIOC
+
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
@@ -100,5 +104,3 @@ void SystemClock_Config(void);
 #endif
 
 #endif /* __MAIN_H */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -1,3 +1,3 @@
-[submodule "STM32HAL_CommonLib"]
-	path = STM32HAL_CommonLib
+[submodule "UserLib/STM32HAL_CommonLib"]
+	path = UserLib/STM32HAL_CommonLib
 	url = https://github.com/gakurobo-taro/STM32HAL_CommonLib.git
