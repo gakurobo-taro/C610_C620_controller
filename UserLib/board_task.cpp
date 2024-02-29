@@ -41,8 +41,8 @@ namespace G24_STM32HAL::RmcBoard{
 			can_c6x0.rx(rx_frame);
 
 			if(rx_frame.id & 0x200){
-				const int id = (rx_frame.id&0xF)-1;
-				if(id<0 || 3<id){
+				const size_t id = (rx_frame.id&0xF)-1;
+				if(3<id){
 					return;
 				}
 
@@ -94,10 +94,10 @@ namespace G24_STM32HAL::RmcBoard{
 		}
 
 		if(data_from != CommPort::NO_DATA && board_id == rx_data.board_ID && rx_data.data_type == CommonLib::DataType::RMC_DATA){
-			int motor_n = (rx_data.register_ID>>8)&0xFF;
-			const int reg_id = rx_data.register_ID & 0xFF;
+			const size_t motor_n = (rx_data.register_ID>>8)&0xFF;
+			const size_t reg_id = rx_data.register_ID & 0xFF;
 
-			if(motor_n < 0 || motor_n > 3){
+			if(motor_n > 3){
 				return;
 			}
 
