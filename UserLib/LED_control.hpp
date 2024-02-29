@@ -30,7 +30,7 @@ namespace G24_STM32HAL::RmcLib{
 
 		float duty = 1;
 
-		LEDState *playing_pattern = nullptr;
+		const LEDState *playing_pattern = nullptr;
 		uint32_t pattern_count = 0;
 		uint32_t length_count = 0;
 
@@ -41,7 +41,7 @@ namespace G24_STM32HAL::RmcLib{
 		void start(void){pwm.start();}
 
 		void play(const LEDState *pattern) override{
-			playing_pattern = const_cast<LEDState *>(pattern);
+			playing_pattern = pattern;
 			pattern_count = 0;
 			length_count = 0;
 
@@ -80,7 +80,7 @@ namespace G24_STM32HAL::RmcLib{
 		GPIO_TypeDef *port;
 		const uint32_t pin;
 
-		LEDState *playing_pattern = nullptr;
+		const LEDState *playing_pattern = nullptr;
 		uint32_t pattern_count = 0;
 		uint32_t length_count = 0;
 
@@ -89,7 +89,7 @@ namespace G24_STM32HAL::RmcLib{
 		}
 
 		void play(const LEDState *pattern) override{
-			playing_pattern = const_cast<LEDState *>(pattern);
+			playing_pattern = pattern;
 			pattern_count = 0;
 			length_count = 0;
 
