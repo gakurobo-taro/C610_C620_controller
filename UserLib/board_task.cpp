@@ -42,7 +42,7 @@ namespace G24_STM32HAL::RmcBoard{
 
 			if(rx_frame.id & 0x200){
 				const size_t id = (rx_frame.id&0xF)-1;
-				if(3<id){
+				if(MOTOR_N<=id){
 					return;
 				}
 
@@ -84,7 +84,6 @@ namespace G24_STM32HAL::RmcBoard{
 			CommonLib::DataConvert::decode_can_frame(rx_frame, rx_data);
 			data_from = CommPort::CAN_MAIN;
 		}else if(usb_cdc.rx_available()){
-
 			CommonLib::SerialData rx_serial;
 			CommonLib::CanFrame rx_frame;
 			usb_cdc.rx(rx_serial);
@@ -94,84 +93,99 @@ namespace G24_STM32HAL::RmcBoard{
 		}
 
 		if(data_from != CommPort::NO_DATA && board_id == rx_data.board_ID && rx_data.data_type == CommonLib::DataType::RMC_DATA){
-			const size_t motor_n = (rx_data.register_ID>>8)&0xFF;
-			const size_t reg_id = rx_data.register_ID & 0xFF;
-
-			if(motor_n > 3){
-				return;
-			}
-
-			if(rx_data.is_request){
-				CommonLib::DataPacket tx_data;
-				auto writer = tx_data.writer();
-
-				if(id_map.at(motor_n).get(reg_id, writer)){
-					CommonLib::SerialData tx_serial;
-					CommonLib::CanFrame tx_frame;
-
-					tx_data.board_ID = board_id;
-					tx_data.register_ID = rx_data.register_ID;
-					tx_data.data_type = CommonLib::DataType::RMC_DATA;
-					tx_data.priority = rx_data.priority;
-
-					switch(data_from){
-					case CommPort::NO_DATA:
-						//nop
-						break;
-					case CommPort::CAN_MAIN:
-						CommonLib::DataConvert::encode_can_frame(tx_data,tx_frame);
-						can_main.tx(tx_frame);
-						break;
-					case CommPort::CAN_SUB:
-						//nop
-						break;
-					case CommPort::CDC:
-						CommonLib::DataConvert::encode_can_frame(tx_data,tx_frame);
-						tx_serial.size = CommonLib::DataConvert::can_to_slcan(tx_frame,(char*)tx_serial.data,tx_serial.max_size);
-						usb_cdc.tx(tx_serial);
-					}
-				}
-			}else{
-				auto reader = rx_data.reader();
-				id_map.at(motor_n).set(reg_id, reader);
-			}
-
-		}else if(data_from != CommPort::NO_DATA && board_id == rx_data.board_ID && rx_data.data_type == CommonLib::DataType::COMMON_DATA){
-			execute_common_command(rx_data);
-		}else if(data_from != CommPort::NO_DATA && rx_data.data_type == CommonLib::DataType::COMMON_DATA){
-			execute_common_command(rx_data);
+			execute_rmc_command(board_id,rx_data,data_from);
+		}else if((data_from != CommPort::NO_DATA && board_id == rx_data.board_ID && rx_data.data_type == CommonLib::DataType::COMMON_DATA)
+				||(data_from != CommPort::NO_DATA && rx_data.data_type == CommonLib::DataType::COMMON_DATA_ENFORCE)){
+			execute_common_command(board_id,rx_data,data_from);
 		}
 	}
 
-	void execute_common_command(const CommonLib::DataPacket &data){
-		const CommonReg reg_id = (CommonReg)data.register_ID;
+	void execute_rmc_command(size_t board_id,const CommonLib::DataPacket &rx_data,CommPort data_from){
+		const size_t motor_n = (rx_data.register_ID>>8)&0xFF;
+		const size_t reg_id = rx_data.register_ID & 0xFF;
 
-		if(data.is_request){
-			switch(reg_id){
-			case CommonReg::ID_REQEST:
-				break;
-			case CommonReg::ID_RESPONSE:
-				break;
-			case CommonReg::EMERGENCY_STOP:
-				break;
-			case CommonReg::RESET_EMERGENCY_STOP:
-				break;
-			default:
-				break;
+		if(MOTOR_N <= motor_n){
+			return;
+		}
+
+		if(rx_data.is_request){
+			CommonLib::DataPacket tx_data;
+			auto writer = tx_data.writer();
+
+			if(id_map.at(motor_n).get(reg_id, writer)){
+				CommonLib::SerialData tx_serial;
+				CommonLib::CanFrame tx_frame;
+
+				tx_data.board_ID = board_id;
+				tx_data.register_ID = rx_data.register_ID;
+				tx_data.data_type = CommonLib::DataType::RMC_DATA;
+				tx_data.priority = rx_data.priority;
+
+				switch(data_from){
+				case CommPort::NO_DATA:
+					//nop
+					break;
+				case CommPort::CAN_MAIN:
+					CommonLib::DataConvert::encode_can_frame(tx_data,tx_frame);
+					can_main.tx(tx_frame);
+					break;
+				case CommPort::CAN_SUB:
+					//nop
+					break;
+				case CommPort::CDC:
+					CommonLib::DataConvert::encode_can_frame(tx_data,tx_frame);
+					tx_serial.size = CommonLib::DataConvert::can_to_slcan(tx_frame,(char*)tx_serial.data,tx_serial.max_size);
+					usb_cdc.tx(tx_serial);
+				}
 			}
 		}else{
-			switch(reg_id){
-			case CommonReg::ID_REQEST:
-				break;
-			case CommonReg::ID_RESPONSE:
-				break;
-			case CommonReg::EMERGENCY_STOP:
-				break;
-			case CommonReg::RESET_EMERGENCY_STOP:
-				break;
-			default:
-				break;
+			auto reader = rx_data.reader();
+			id_map.at(motor_n).set(reg_id, reader);
+		}
+	}
+
+	void execute_common_command(size_t board_id,const CommonLib::DataPacket &rx_data,CommPort data_from){
+		CommonLib::DataPacket tx_data;
+		CommonLib::CanFrame tx_frame;
+		CommonLib::SerialData tx_serial;
+
+		switch((CommonReg)rx_data.register_ID){
+		case CommonReg::NOP:
+			break;
+		case CommonReg::ID_REQEST:
+			if(rx_data.is_request){
+				tx_data.board_ID = board_id;
+				tx_data.data_type = CommonLib::DataType::COMMON_DATA;
+				tx_data.register_ID = (uint16_t)CommonReg::ID_REQEST;
+				tx_data.writer().write<uint8_t>((uint8_t)CommonLib::DataType::RMC_DATA);
+				tx_data.priority = rx_data.priority;
+
+				switch(data_from){
+				case CommPort::NO_DATA:
+					//nop
+					break;
+				case CommPort::CAN_MAIN:
+					CommonLib::DataConvert::encode_can_frame(tx_data,tx_frame);
+					can_main.tx(tx_frame);
+					break;
+				case CommPort::CAN_SUB:
+					//nop
+					break;
+				case CommPort::CDC:
+					CommonLib::DataConvert::encode_can_frame(tx_data,tx_frame);
+					tx_serial.size = CommonLib::DataConvert::can_to_slcan(tx_frame,(char*)tx_serial.data,tx_serial.max_size);
+					usb_cdc.tx(tx_serial);
+				}
 			}
+			break;
+		case CommonReg::EMERGENCY_STOP:
+			emergency_stop_sequence();
+			break;
+		case CommonReg::RESET_EMERGENCY_STOP:
+			//nop
+			break;
+		default:
+			break;
 		}
 	}
 
@@ -195,6 +209,13 @@ namespace G24_STM32HAL::RmcBoard{
 				}
 			}
 		}
+	}
+
+	void emergency_stop_sequence(void){
+		for(auto &d:RmcBoard::driver){
+			d.set_control_mode(RmcLib::ControlMode::PWM_MODE);
+		}
+		RmcBoard::LED_R.play(RmcLib::LEDPattern::error);
 	}
 
 

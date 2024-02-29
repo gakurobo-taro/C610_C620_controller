@@ -231,9 +231,12 @@ namespace G24_STM32HAL::RmcBoard{
 	//メインCANの処理（外部との通信）
 	void main_comm_prossess(void);
 
-	void execute_common_command(const CommonLib::DataPacket &data);
+	void execute_rmc_command(size_t board_id,const CommonLib::DataPacket &rx_data,CommPort data_from);
+	void execute_common_command(size_t board_id,const CommonLib::DataPacket &rx_data,CommPort data_from);
 
 	void monitor_task(void);
+
+	void emergency_stop_sequence(void);
 
 #ifdef MOTOR_DEBUG
 	void motor_test(void);

@@ -18,8 +18,8 @@
 namespace G24_STM32HAL::RmcBoard{
 	inline constexpr size_t MOTOR_N = 4;
 	enum class CommonReg:uint16_t{
+		NOP,
 		ID_REQEST,
-		ID_RESPONSE,
 		EMERGENCY_STOP = 0x0E,
 		RESET_EMERGENCY_STOP = 0x0F,
 	};

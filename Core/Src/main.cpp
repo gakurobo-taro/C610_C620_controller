@@ -122,10 +122,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
     }else if(htim == RmcBoard::can_timeout_timer){
     	if(RmcBoard::timeout_en_flag){
-    		for(auto &d:RmcBoard::driver){
-				d.set_control_mode(RmcLib::ControlMode::PWM_MODE);
-			}
-			RmcBoard::LED_R.play(RmcLib::LEDPattern::error);
+    		RmcBoard::emergency_stop_sequence();
     	}else{
     		RmcBoard::timeout_en_flag = true;
     	}
