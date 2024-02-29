@@ -72,7 +72,8 @@ namespace G24_STM32HAL::RmcBoard{
 
 	//メインCANの処理（外部との通信）
 	void main_comm_prossess(void){
-		int id = read_board_id();
+
+		int board_id = read_board_id();
 		CommonLib::DataPacket rx_data;
 		CommPort data_from = CommPort::NO_DATA;
 
@@ -82,6 +83,7 @@ namespace G24_STM32HAL::RmcBoard{
 			CommonLib::DataConvert::decode_can_frame(rx_frame, rx_data);
 			data_from = CommPort::CAN_MAIN;
 		}else if(usb_cdc.rx_available()){
+
 			CommonLib::SerialData rx_serial;
 			CommonLib::CanFrame rx_frame;
 			usb_cdc.rx(rx_serial);
@@ -90,14 +92,22 @@ namespace G24_STM32HAL::RmcBoard{
 			data_from = CommPort::CDC;
 		}
 
-		if(data_from != CommPort::NO_DATA && id == rx_data.board_ID && rx_data.data_type == CommonLib::DataType::RMC_DATA){
-			if(rx_data.is_request){
-				LED_R.out_as_gpio(true);
-				CommonLib::DataPacket tx_data;
-				if(read_rmc_command(rx_data,tx_data)){
+		if(data_from != CommPort::NO_DATA && board_id == rx_data.board_ID && rx_data.data_type == CommonLib::DataType::RMC_DATA){
+			int motor_n = (rx_data.register_ID>>8)&0xFF;
+			int reg_id = rx_data.register_ID & 0xFF;
 
+			if(rx_data.is_request){
+				CommonLib::DataPacket tx_data;
+				auto writer = tx_data.writer();
+
+				if(id_map.at(motor_n).get(reg_id, writer)){
 					CommonLib::SerialData tx_serial;
 					CommonLib::CanFrame tx_frame;
+
+					tx_data.board_ID = board_id;
+					tx_data.data_type = CommonLib::DataType::RMC_DATA;
+					tx_data.priority = rx_data.priority;
+
 					switch(data_from){
 					case CommPort::NO_DATA:
 						//nop
@@ -106,6 +116,9 @@ namespace G24_STM32HAL::RmcBoard{
 						CommonLib::DataConvert::encode_can_frame(tx_data,tx_frame);
 						can_main.tx(tx_frame);
 						break;
+					case CommPort::CAN_SUB:
+						//nop
+						break;
 					case CommPort::CDC:
 						CommonLib::DataConvert::encode_can_frame(tx_data,tx_frame);
 						tx_serial.size = CommonLib::DataConvert::can_to_slcan(tx_frame,(char*)tx_serial.data,tx_serial.max_size);
@@ -113,323 +126,15 @@ namespace G24_STM32HAL::RmcBoard{
 					}
 				}
 			}else{
-				LED_G.out_as_gpio(true);
-				write_rmc_command(rx_data);
+				auto reader = rx_data.reader();
+				id_map.at(motor_n).set(reg_id, reader);
 			}
-		}else if(data_from != CommPort::NO_DATA && id == rx_data.board_ID && rx_data.data_type == CommonLib::DataType::COMMON_DATA){
+
+		}else if(data_from != CommPort::NO_DATA && board_id == rx_data.board_ID && rx_data.data_type == CommonLib::DataType::COMMON_DATA){
 			execute_common_command(rx_data);
 		}else if(data_from != CommPort::NO_DATA && rx_data.data_type == CommonLib::DataType::COMMON_DATA){
 			execute_common_command(rx_data);
 		}
-
-	}
-
-	bool write_rmc_command(const CommonLib::DataPacket &data){
-		RmcReg reg_id = (RmcReg)(data.register_ID & 0xFF);
-		uint16_t motor_id = data.register_ID >> 8;
-
-		CommonLib::ByteReader reader = data.reader();
-		std::optional<float> fval;
-		std::optional<uint8_t> u8val;
-		std::optional<uint16_t> u16val;
-		std::optional<uint64_t> u64val;
-		RmcLib::PIDGain tmp_gain;
-
-		switch(reg_id){
-		case RmcReg::NOP:
-			//nop
-			return false;
-			break;
-
-		case RmcReg::MOTOR_TYPE:
-			return false;
-			break;
-
-		case RmcReg::CONTROL_TYPE:
-			u8val = reader.read<uint8_t>();
-			if(u8val.has_value()){
-				driver.at(motor_id).set_control_mode((RmcLib::ControlMode)u8val.value());
-			}else{
-				return false;
-			}
-			break;
-
-		case RmcReg::GEAR_RATIO:
-			fval = reader.read<float>();
-			if(fval.has_value()){
-				motor_state.at(motor_id).set_gear_ratio(fval.value());
-			}else{
-				return false;
-			}
-			break;
-
-		case RmcReg::MOTOR_STATE:
-			return false;
-			break;
-
-		case RmcReg::CAN_TIMEOUT:
-			u16val = reader.read<uint16_t>();
-			if(u16val.has_value()){
-				if(u16val.value() == 0){
-					HAL_TIM_Base_Stop_IT(can_timeout_timer);
-				}else{
-					__HAL_TIM_SET_AUTORELOAD(can_timeout_timer,u16val.value());
-					__HAL_TIM_SET_COUNTER(can_timeout_timer,0);
-
-					if(HAL_TIM_Base_GetState(can_timeout_timer) == HAL_TIM_STATE_READY){
-						HAL_TIM_Base_Start_IT(can_timeout_timer);
-					}
-				}
-			}else{
-				return false;
-			}
-			break;
-		case RmcReg::PWM:
-			//nop
-			return false;
-			break;
-
-		case RmcReg::PWM_TARGET:
-			fval = reader.read<float>();
-			if(fval.has_value()){
-				driver.at(motor_id).set_pwm(fval.value());
-			}else{
-				return false;
-			}
-			break;
-
-		case RmcReg::SPD:
-			//nop
-			break;
-
-		case RmcReg::SPD_TARGET:
-			fval = reader.read<float>();
-			if(fval.has_value()){
-				driver.at(motor_id).set_target_speed(fval.value());
-			}else{
-				return false;
-			}
-			break;
-
-		case RmcReg::PWM_LIM:
-			fval = reader.read<float>();
-			if(fval.has_value()){
-				driver.at(motor_id).set_pwm_limit(fval.value());
-			}else{
-				return false;
-			}
-			break;
-
-		case RmcReg::SPD_GAIN_P:
-			fval = reader.read<float>();
-			if(fval.has_value()){
-				tmp_gain = driver.at(motor_id).get_speed_gain();
-				tmp_gain.kp = fval.value();
-				driver.at(motor_id).set_speed_gain(tmp_gain);
-			}else{
-
-			}
-			break;
-
-		case RmcReg::SPD_GAIN_I:
-			fval = reader.read<float>();
-			if(fval.has_value()){
-				tmp_gain = driver.at(motor_id).get_speed_gain();
-				tmp_gain.ki = fval.value();
-				driver.at(motor_id).set_speed_gain(tmp_gain);
-			}else{
-				return false;
-			}
-			break;
-
-		case RmcReg::SPD_GAIN_D:
-			fval = reader.read<float>();
-			if(fval.has_value()){
-				tmp_gain = driver.at(motor_id).get_speed_gain();
-				tmp_gain.kd = fval.value();
-				driver.at(motor_id).set_speed_gain(tmp_gain);
-			}else{
-				return false;
-			}
-			break;
-
-		case RmcReg::POS:
-			fval = reader.read<float>();
-			if(fval.has_value()){
-				float current_angle = driver.at(motor_id).get_current_low_position();
-				driver.at(motor_id).set_origin(current_angle - fval.value());
-			}else{
-				return false;
-			}
-			break;
-		case RmcReg::POS_TARGET:
-			fval = reader.read<float>();
-			if(fval.has_value()){
-				driver.at(motor_id).set_target_position(fval.value());
-			}else {
-				return false;
-			}
-			break;
-		case RmcReg::SPD_LIM:
-			fval = reader.read<float>();
-			if(fval.has_value()){
-				driver.at(motor_id).set_speed_limit(fval.value());
-			}else{
-				return false;
-			}
-			break;
-		case RmcReg::POS_GAIN_P:
-			fval = reader.read<float>();
-			if(fval.has_value()){
-				tmp_gain = driver.at(motor_id).get_position_gain();
-				tmp_gain.kp = fval.value();
-				driver.at(motor_id).set_position_gain(tmp_gain);
-			}else{
-				return false;
-			}
-			break;
-		case RmcReg::POS_GAIN_I:
-			fval = reader.read<float>();
-			if(fval.has_value()){
-				tmp_gain = driver.at(motor_id).get_position_gain();
-				tmp_gain.ki = fval.value();
-				driver.at(motor_id).set_position_gain(tmp_gain);
-			}else{
-				return false;
-			}
-			break;
-		case RmcReg::POS_GAIN_D:
-			fval = reader.read<float>();
-			if(fval.has_value()){
-				tmp_gain = driver.at(motor_id).get_position_gain();
-				tmp_gain.kd = fval.value();
-				driver.at(motor_id).set_position_gain(tmp_gain);
-			}else{
-				return false;
-			}
-			break;
-
-		case RmcReg::MONITOR_PERIOD:
-			u16val = reader.read<uint16_t>();
-			if(u16val.has_value()){
-				if(u16val.value() == 0){
-					HAL_TIM_Base_Stop_IT(monitor_timer);
-				}else{
-					__HAL_TIM_SET_AUTORELOAD(monitor_timer,u16val.value());
-					__HAL_TIM_SET_COUNTER(monitor_timer,0);
-
-					if(HAL_TIM_Base_GetState(monitor_timer) == HAL_TIM_STATE_READY){
-						HAL_TIM_Base_Start_IT(monitor_timer);
-					}
-				}
-			}
-			break;
-		case RmcReg::MONITOR_REG:
-			u64val = reader.read<uint64_t>();
-			if(u64val.has_value()){
-				monitor.at(motor_id) = std::bitset<0x35>(u64val.value());
-			}
-			break;
-		default:
-			return false;
-			break;
-		}
-		return true;
-	}
-
-	bool read_rmc_command(const CommonLib::DataPacket &data,CommonLib::DataPacket &return_data){
-		CommonLib::ByteWriter writer = return_data.writer();
-		RmcReg reg_id = (RmcReg)(data.register_ID & 0xFF);
-		uint16_t motor_id = data.register_ID >> 8;
-
-		return_data = data;
-		return_data.is_request = false;
-
-		switch(reg_id){
-		case RmcReg::NOP:
-			//nop
-			return false;
-			break;
-		case RmcReg::MOTOR_TYPE:
-			//TODO:PWMの最大値が変わるが正直現状誤差なので放置しちゃった
-			return false;
-			break;
-		case RmcReg::CONTROL_TYPE:
-			writer.write((uint8_t)driver.at(motor_id).get_control_mode());
-			break;
-		case RmcReg::GEAR_RATIO:
-			writer.write(motor_state.at(motor_id).get_gear_ratio());
-			break;
-		case RmcReg::MOTOR_STATE:
-			//TODO::実装
-			return false;
-			break;
-		case RmcReg::CAN_TIMEOUT:
-			if(HAL_TIM_Base_GetState(can_timeout_timer) == HAL_TIM_STATE_BUSY){
-				writer.write<uint16_t>(__HAL_TIM_GET_AUTORELOAD(can_timeout_timer));
-			}else{
-				writer.write<uint16_t>(0);
-			}
-			break;
-		case RmcReg::PWM:
-			writer.write(driver.at(motor_id).get_pwm());
-			break;
-		case RmcReg::PWM_TARGET:
-			writer.write(driver.at(motor_id).get_pwm());
-			break;
-		case RmcReg::SPD:
-			writer.write(driver.at(motor_id).get_current_speed());
-			break;
-		case RmcReg::SPD_TARGET:
-			writer.write(driver.at(motor_id).get_target_speed());
-			break;
-		case RmcReg::PWM_LIM:
-			//TODO:実装　消してもいいかもしれん
-			return false;
-			break;
-		case RmcReg::SPD_GAIN_P:
-			writer.write<float>(driver.at(motor_id).get_speed_gain().kp);
-			break;
-		case RmcReg::SPD_GAIN_I:
-			writer.write<float>(driver.at(motor_id).get_speed_gain().ki);
-			break;
-		case RmcReg::SPD_GAIN_D:
-			writer.write<float>(driver.at(motor_id).get_speed_gain().kd);
-			break;
-		case RmcReg::POS:
-			writer.write(driver.at(motor_id).get_current_position());
-			break;
-		case RmcReg::POS_TARGET:
-			writer.write(driver.at(motor_id).get_target_position());
-			break;
-		case RmcReg::SPD_LIM:
-			//TODO:実装　消してもいいかもしれん
-			return false;
-			break;
-		case RmcReg::POS_GAIN_P:
-			writer.write<float>(driver.at(motor_id).get_position_gain().kp);
-			break;
-		case RmcReg::POS_GAIN_I:
-			writer.write<float>(driver.at(motor_id).get_position_gain().ki);
-			break;
-		case RmcReg::POS_GAIN_D:
-			writer.write<float>(driver.at(motor_id).get_position_gain().kd);
-			break;
-		case RmcReg::MONITOR_PERIOD:
-			if(HAL_TIM_Base_GetState(monitor_timer) == HAL_TIM_STATE_BUSY){
-				writer.write<uint16_t>(__HAL_TIM_GET_AUTORELOAD(monitor_timer));
-			}else{
-				writer.write<uint16_t>(0);
-			}
-			break;
-		case RmcReg::MONITOR_REG:
-			writer.write<uint64_t>(monitor.at(motor_id).to_ullong());
-			break;
-		default:
-			return false;
-			break;
-		}
-		return true;
 	}
 
 	void execute_common_command(const CommonLib::DataPacket &data){
@@ -466,19 +171,20 @@ namespace G24_STM32HAL::RmcBoard{
 
 	void monitor_task(void){
 		for(size_t motor_n = 0; motor_n < MOTOR_N; motor_n++){
-			for(size_t reg_n = 0; reg_n < monitor[motor_n].size(); reg_n ++){
-				if(monitor[motor_n].test(reg_n)){
-					CommonLib::DataPacket tmp_packet;
-					CommonLib::DataPacket tx_packet;
-					CommonLib::CanFrame tx_frame;
+			for(auto &map_element : id_map[motor_n].accessors_map){
+				if(map_element.first < monitor[motor_n].size()){
+					if(monitor[motor_n].test(map_element.first)){
+						CommonLib::DataPacket tx_packet;
+						CommonLib::CanFrame tx_frame;
+						tx_packet.register_ID = map_element.first | (motor_n << 8);
+						tx_packet.board_ID = read_board_id();
+						tx_packet.data_type = CommonLib::DataType::RMC_DATA;
 
-					tmp_packet.board_ID = read_board_id();
-					tmp_packet.data_type = CommonLib::DataType::RMC_DATA;
-					tmp_packet.register_ID = (motor_n << 8) | reg_n;
-
-					if(read_rmc_command(tmp_packet,tx_packet)){
-						CommonLib::DataConvert::encode_can_frame(tx_packet, tx_frame);
-						can_main.tx(tx_frame);
+						auto writer = tx_packet.writer();
+						if(map_element.second.get(writer)){
+							CommonLib::DataConvert::encode_can_frame(tx_packet, tx_frame);
+							can_main.tx(tx_frame);
+						}
 					}
 				}
 			}

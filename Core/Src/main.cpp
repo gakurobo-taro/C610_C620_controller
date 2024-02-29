@@ -116,7 +116,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
     }else if(htim == RmcBoard::can_timeout_timer){
     	RmcBoard::LED_R.out_as_gpio(true);
-
+    	for(auto &d:RmcBoard::driver){
+    		d.set_control_mode(RmcLib::ControlMode::PWM_MODE);
+    	}
+    	HAL_Delay(1);
     }
 }
 
@@ -181,16 +184,6 @@ int main(void)
 	  RmcBoard::LED_R.out_as_gpio(false);
 	  RmcBoard::LED_G.out_as_gpio(false);
 	  RmcBoard::LED_B.out_as_gpio(false);
-
-//	  G24_STM32HAL::CommonLib::DataPacket data;
-//	  data.board_ID = read_board_id();
-//	  data.is_request = false;
-//	  data.data_type = G24_STM32HAL::CommonLib::DataType::RMC_DATA;
-//	  data.register_ID = 0x11;
-//	  auto writer = data.writer();
-//	  writer.write<float>(0.01f);
-//	  execute_rmc_command(data);
-//	  HAL_Delay(100);
 
 	  //motor_test();
   }
