@@ -11,6 +11,8 @@
 #include "board_info.hpp"
 
 #include "motor_control.hpp"
+#include "LED_control.hpp"
+#include "LED_pattern.hpp"
 #include "STM32HAL_CommonLib/can_comm.hpp"
 #include "STM32HAL_CommonLib/pwm.hpp"
 #include "STM32HAL_CommonLib/data_packet.hpp"
@@ -70,15 +72,16 @@ namespace G24_STM32HAL::RmcBoard{
 	};
 
 	//LEDs
-	inline auto LED_R = CommonLib::PWMHard{&htim5,TIM_CHANNEL_1};
-	inline auto LED_G = CommonLib::PWMHard{&htim5,TIM_CHANNEL_2};
-	inline auto LED_B = CommonLib::PWMHard{&htim5,TIM_CHANNEL_3};
+	inline auto LED_R = RmcLib::LEDPWM{&htim5,TIM_CHANNEL_1};
+	inline auto LED_G = RmcLib::LEDPWM{&htim5,TIM_CHANNEL_2};
+	inline auto LED_B = RmcLib::LEDPWM{&htim5,TIM_CHANNEL_3};
 
-	inline auto LED = std::array<GPIOParam,4>{
-		GPIOParam{RM_LED1_GPIO_Port,RM_LED1_Pin},
-		GPIOParam{RM_LED2_GPIO_Port,RM_LED2_Pin},
-		GPIOParam{RM_LED3_GPIO_Port,RM_LED3_Pin},
-		GPIOParam{RM_LED4_GPIO_Port,RM_LED4_Pin},
+
+	inline auto LED = std::array<RmcLib::LEDGPIO,MOTOR_N>{
+		RmcLib::LEDGPIO{RM_LED1_GPIO_Port,RM_LED1_Pin},
+		RmcLib::LEDGPIO{RM_LED2_GPIO_Port,RM_LED2_Pin},
+		RmcLib::LEDGPIO{RM_LED3_GPIO_Port,RM_LED3_Pin},
+		RmcLib::LEDGPIO{RM_LED4_GPIO_Port,RM_LED4_Pin},
 	};
 
 	//can
@@ -208,7 +211,6 @@ namespace G24_STM32HAL::RmcBoard{
 			.add((uint16_t)RmcReg::MONITOR_PERIOD,CommonLib::DataAccessor::generate<uint16_t>([](uint16_t period){set_timer_period(monitor_timer,period);}, []()->uint16_t{return get_timer_period(monitor_timer);}))
 			.add((uint16_t)RmcReg::MONITOR_REG,   CommonLib::DataAccessor::generate<uint64_t>([](uint64_t val){ monitor[3] = std::bitset<0x35+1>{val};}, []()->uint64_t{ return monitor[3].to_ullong();}))
 			.build(),
-
 	};
 
 	//functions

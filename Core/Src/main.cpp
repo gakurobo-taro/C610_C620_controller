@@ -62,7 +62,6 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 
 void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan){
-	RmcBoard::LED_B.out_as_gpio(true);
 	if(hcan == RmcBoard::can_main.get_can_handle()){
 		RmcBoard::can_main.tx_interrupt_task();
 	}else if(hcan == RmcBoard::can_c6x0.get_can_handle()){
@@ -70,7 +69,6 @@ void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan){
 	}
 }
 void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef *hcan){
-	RmcBoard::LED_B.out_as_gpio(true);
 	if(hcan == RmcBoard::can_main.get_can_handle()){
 		RmcBoard::can_main.tx_interrupt_task();
 	}else if(hcan == RmcBoard::can_c6x0.get_can_handle()){
@@ -78,7 +76,6 @@ void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef *hcan){
 	}
 }
 void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef *hcan){
-	RmcBoard::LED_B.out_as_gpio(true);
 	if(hcan == RmcBoard::can_main.get_can_handle()){
 		RmcBoard::can_main.tx_interrupt_task();
 	}else if(hcan == RmcBoard::can_c6x0.get_can_handle()){
@@ -87,39 +84,47 @@ void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef *hcan){
 }
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
-	RmcBoard::LED_B.out_as_gpio(true);
 	RmcBoard::can_c6x0.rx_interrupt_task();
 	RmcBoard::motor_data_process();
 }
 void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan){
-	RmcBoard::LED_B.out_as_gpio(true);
 	RmcBoard::can_main.rx_interrupt_task();
 	__HAL_TIM_SET_COUNTER(&htim12,0);
+	RmcBoard::LED_B.play(RmcLib::LEDPattern::ok);
 }
 
 void usb_cdc_rx_callback(const uint8_t *input,size_t size){
-	RmcBoard::LED_B.out_as_gpio(true);
 	RmcBoard::usb_cdc.rx_interrupt_task(input, size);
 	__HAL_TIM_SET_COUNTER(&htim12,0);
+
+	RmcBoard::LED_B.play(RmcLib::LEDPattern::ok);
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if (htim == RmcBoard::motor_control_timer){
-    	RmcBoard::LED_G.out_as_gpio(true);
     	RmcBoard::usb_cdc.tx_interrupt_task();
     	RmcBoard::send_motor_parameters();
 
+    	RmcBoard::LED_R.update();
+    	RmcBoard::LED_G.update();
+    	RmcBoard::LED_B.update();
+
+    	for(auto &l:RmcBoard::LED){
+    		l.update();
+    	}
+
+    	RmcBoard::LED_G.play(RmcLib::LEDPattern::ok);
+
     }else if(htim == RmcBoard::monitor_timer){
-    	RmcBoard::LED_R.out_as_gpio(true);
     	RmcBoard::monitor_task();
+    	RmcBoard::LED_R.play(RmcLib::LEDPattern::ok);
 
     }else if(htim == RmcBoard::can_timeout_timer){
-    	RmcBoard::LED_R.out_as_gpio(true);
     	for(auto &d:RmcBoard::driver){
     		d.set_control_mode(RmcLib::ControlMode::PWM_MODE);
     	}
-    	HAL_Delay(1);
+    	RmcBoard::LED_R.play(RmcLib::LEDPattern::error);
     }
 }
 
@@ -180,12 +185,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  RmcBoard::main_comm_prossess();
-
-	  RmcBoard::LED_R.out_as_gpio(false);
-	  RmcBoard::LED_G.out_as_gpio(false);
-	  RmcBoard::LED_B.out_as_gpio(false);
-
-	  //motor_test();
+	  //RmcBoard::motor_test();
   }
   /* USER CODE END 3 */
 }
