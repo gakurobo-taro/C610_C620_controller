@@ -47,6 +47,20 @@ namespace G24_STM32HAL::RmcBoard{
 		GPIOParam{ID2_GPIO_Port,ID2_Pin},
 		GPIOParam{ID3_GPIO_Port,ID3_Pin},
 	};
+	inline auto i2c_sel = std::array<GPIOParam,MOTOR_N>{
+		GPIOParam{I2C_SEL1_GPIO_Port,I2C_SEL1_Pin},
+		GPIOParam{I2C_SEL2_GPIO_Port,I2C_SEL2_Pin},
+		GPIOParam{I2C_SEL3_GPIO_Port,I2C_SEL3_Pin},
+		GPIOParam{I2C_SEL4_GPIO_Port,I2C_SEL4_Pin},
+	};
+
+	//abs encoder
+	inline auto as5600_sel = std::array<RmcLib::AS5600State,MOTOR_N>{
+		RmcLib::AS5600State{&hi2c3,1000.0f},
+		RmcLib::AS5600State{&hi2c3,1000.0f},
+		RmcLib::AS5600State{&hi2c3,1000.0f},
+		RmcLib::AS5600State{&hi2c3,1000.0f},
+	};
 
 	//timer
 	inline auto *motor_control_timer = &htim14;

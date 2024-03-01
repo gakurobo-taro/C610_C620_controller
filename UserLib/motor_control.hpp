@@ -69,19 +69,28 @@ namespace G24_STM32HAL::RmcLib{
 	//AS5600による制御
 	struct AS5600State:MotorState{
 	private:
+		static constexpr uint16_t as5600_id = 0x36;
+		static constexpr size_t as5600_resolution = 12;
+		static constexpr float ks = 2*M_PI/(float)((1<<as5600_resolution)-1);
+
 		I2C_HandleTypeDef* i2c;
 		AngleEncoder encoder;
+		const float freq;
+
+		uint16_t enc_val = 0;
+		float rad_old = 0;
 	public:
-		AS5600State(I2C_HandleTypeDef* _i2c):i2c(_i2c),encoder(12){
+		AS5600State(I2C_HandleTypeDef* _i2c,float _freq):i2c(_i2c),encoder(as5600_resolution),freq(_freq){
 		}
 
-		void i2c_start(void){
-
+		void read_start(void){
+			HAL_I2C_Master_Receive_IT(i2c, as5600_id<<1, (uint8_t*)&enc_val, 2);
 		}
 		void i2c_rx_interrupt_task(void){
-
+			rad = encoder.update_angle(enc_val);
+			speed = (rad - rad_old)*freq;
+			rad_old = rad;
 		}
-
 	};
 
 	class MotorDriver{

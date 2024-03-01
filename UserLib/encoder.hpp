@@ -54,6 +54,21 @@ namespace G24_STM32HAL::RmcLib{
 			return get_rad();
 		}
 
+		float update_angle(uint16_t angle){
+			angle = angle&(resolution-1);
+			int angle_top_2 = angle>>(resolution_bit-2);
+			int old_angle_top_2 = raw_angle>>(resolution_bit-2);
+
+			if(old_angle_top_2 == 3 && angle_top_2 == 0){
+				turn_count ++;
+			}else if(old_angle_top_2 == 0 && angle_top_2 == 3){
+				turn_count --;
+			}
+
+			raw_angle = angle;
+			return get_rad();
+		}
+
 	};
 
 }

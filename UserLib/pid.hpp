@@ -33,8 +33,11 @@ private:
 	float limit_max;
 public:
 	PID(float _pid_freq,PIDGain _gain={0.0f,0.0f,0.0f}, bool anti_windup = false,float _limit_min = 0.0f,float _limit_max = 0.0f):
-		pid_freq(_pid_freq),gain(_gain),
-		enable_anti_windup(anti_windup),limit_min(_limit_min),limit_max(_limit_max),
+		pid_freq(_pid_freq),
+		gain(_gain),
+		enable_anti_windup(anti_windup),
+		limit_min(_limit_min),
+		limit_max(_limit_max),
 		k_anti_windup((gain.kp != 0.0f) ? 1/gain.kp : 0){}
 
 	float operator()(float target,float feedback);

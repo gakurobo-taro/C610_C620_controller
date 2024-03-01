@@ -130,6 +130,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     }
 }
 
+void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c){
+
+}
+
 /* USER CODE END 0 */
 
 /**
