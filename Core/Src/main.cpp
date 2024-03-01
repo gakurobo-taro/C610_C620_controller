@@ -62,7 +62,6 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 
 void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan){
-	RmcBoard::LED_B.out_as_gpio(true);
 	if(hcan == RmcBoard::can_main.get_can_handle()){
 		RmcBoard::can_main.tx_interrupt_task();
 	}else if(hcan == RmcBoard::can_c6x0.get_can_handle()){
@@ -70,7 +69,6 @@ void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan){
 	}
 }
 void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef *hcan){
-	RmcBoard::LED_B.out_as_gpio(true);
 	if(hcan == RmcBoard::can_main.get_can_handle()){
 		RmcBoard::can_main.tx_interrupt_task();
 	}else if(hcan == RmcBoard::can_c6x0.get_can_handle()){
@@ -78,7 +76,6 @@ void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef *hcan){
 	}
 }
 void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef *hcan){
-	RmcBoard::LED_B.out_as_gpio(true);
 	if(hcan == RmcBoard::can_main.get_can_handle()){
 		RmcBoard::can_main.tx_interrupt_task();
 	}else if(hcan == RmcBoard::can_c6x0.get_can_handle()){
@@ -92,22 +89,44 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 }
 void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan){
 	RmcBoard::can_main.rx_interrupt_task();
+	__HAL_TIM_SET_COUNTER(RmcBoard::can_timeout_timer,0);
+	RmcBoard::LED_B.play(RmcLib::LEDPattern::ok);
 }
 
 void usb_cdc_rx_callback(const uint8_t *input,size_t size){
 	RmcBoard::usb_cdc.rx_interrupt_task(input, size);
+	__HAL_TIM_SET_COUNTER(RmcBoard::can_timeout_timer,0);
+
+	RmcBoard::LED_B.play(RmcLib::LEDPattern::ok);
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-    if (htim == &htim14){
-    	RmcBoard::LED_G.out_as_gpio(true);
+    if (htim == RmcBoard::motor_control_timer){
     	RmcBoard::usb_cdc.tx_interrupt_task();
     	RmcBoard::send_motor_parameters();
-    }
-    if((htim == &htim13) && RmcBoard::monitor_enable){
-    	RmcBoard::LED_R.out_as_gpio(true);
+
+    	RmcBoard::LED_R.update();
+    	RmcBoard::LED_G.update();
+    	RmcBoard::LED_B.update();
+
+    	for(auto &l:RmcBoard::LED){
+    		l.update();
+    	}
+
+    	RmcBoard::LED_G.play(RmcLib::LEDPattern::ok);
+
+    }else if(htim == RmcBoard::monitor_timer){
     	RmcBoard::monitor_task();
+    	RmcBoard::LED_R.play(RmcLib::LEDPattern::ok);
+
+    }else if(htim == RmcBoard::can_timeout_timer){
+    	if(RmcBoard::timeout_en_flag){
+    		RmcBoard::emergency_stop_sequence();
+    	}else{
+    		RmcBoard::timeout_en_flag = true;
+    	}
+
     }
 }
 
@@ -148,14 +167,15 @@ int main(void)
   MX_TIM5_Init();
   MX_TIM14_Init();
   MX_TIM13_Init();
+  MX_TIM12_Init();
   /* USER CODE BEGIN 2 */
   RmcBoard::init();
 
-  HAL_TIM_Base_Start_IT(&htim14);
-  HAL_TIM_Base_Start_IT(&htim13);
-  __HAL_TIM_SET_AUTORELOAD(&htim13, 1000);
-
-
+  HAL_TIM_Base_Start_IT(RmcBoard::motor_control_timer);
+  //HAL_TIM_Base_Start_IT(RmcBoard::monitor_timer);
+  //HAL_TIM_Base_Start_IT(RmcBoard::can_timeout_timer);
+  __HAL_TIM_SET_AUTORELOAD(RmcBoard::monitor_timer, 700);
+  __HAL_TIM_SET_AUTORELOAD(RmcBoard::can_timeout_timer, 2000);
 
   /* USER CODE END 2 */
 
@@ -167,30 +187,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  RmcBoard::main_comm_prossess();
-
-	  RmcBoard::LED_R.out_as_gpio(false);
-	  RmcBoard::LED_G.out_as_gpio(false);
-	  RmcBoard::LED_B.out_as_gpio(false);
-
-//	  CommonLib::SerialData data;
-//	  data.size = sprintf((char*)data.data,"%4.3f,%d\r\n",
-//			  RmcBoard::driver.at(0).get_current_position(),
-//			  RmcBoard::motor_state[0].encoder.turn_count);
-//	  RmcBoard::usb_cdc.tx(data);
-//	  HAL_Delay(1);
-
-
-//	  G24_STM32HAL::CommonLib::DataPacket data;
-//	  data.board_ID = read_board_id();
-//	  data.is_request = false;
-//	  data.data_type = G24_STM32HAL::CommonLib::DataType::RMC_DATA;
-//	  data.register_ID = 0x11;
-//	  auto writer = data.writer();
-//	  writer.write<float>(0.01f);
-//	  execute_rmc_command(data);
-//	  HAL_Delay(100);
-
-	  //motor_test();
+	  //RmcBoard::motor_test();
   }
   /* USER CODE END 3 */
 }
@@ -203,12 +200,12 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
   /** Configure the main internal regulator output voltage
   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
@@ -225,22 +222,17 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+
   /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV8;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_CLK48;
-  PeriphClkInitStruct.Clk48ClockSelection = RCC_CLK48CLKSOURCE_PLLQ;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
   {
     Error_Handler();
   }
@@ -281,5 +273,3 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
