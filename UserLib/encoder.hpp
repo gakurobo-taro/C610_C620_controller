@@ -31,7 +31,7 @@ namespace G24_STM32HAL::RmcLib{
 		AngleEncoder(size_t _resolution_bit):
 			resolution_bit(_resolution_bit),
 			resolution(1<<resolution_bit),
-			angle_to_rad(2*M_PI/resolution),
+			angle_to_rad(2*M_PI/(float)resolution),
 			rad_to_angle(1/angle_to_rad){
 		}
 
