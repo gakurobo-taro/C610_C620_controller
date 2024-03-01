@@ -27,10 +27,9 @@ namespace G24_STM32HAL::RmcLib{
 	struct MotorState{
 		float rad;
 		float speed;
-		float current;
-		float temperature;
 	};
 
+	//ロボマス内臓エンコーダ
 	struct C6x0State:MotorState{
 	private:
 		float gear_ratio;
@@ -38,9 +37,11 @@ namespace G24_STM32HAL::RmcLib{
 		float ks;
 		AngleEncoder encoder;
 	public:
+		float current;
+		float temperature;
 		C6x0State(float _gear_ratio = 1):
 			gear_ratio(_gear_ratio),gear_ratio_inv(1/_gear_ratio),
-			ks(2*M_PI/(gear_ratio*360.0f)),encoder(13){}
+			ks(2*M_PI/(gear_ratio*60.0f)),encoder(13){}
 
 		bool update(CommonLib::CanFrame frame){
 			if(frame.is_ext_id || frame.is_remote || frame.data_length != 8 || !(0x200&frame.id)){
@@ -58,11 +59,29 @@ namespace G24_STM32HAL::RmcLib{
 		void set_gear_ratio(float ratio){
 			gear_ratio = ratio;
 			gear_ratio_inv = 1/ratio;
-			ks = 2*M_PI/(gear_ratio*360.0f);
+			ks = 2*M_PI/(gear_ratio*60.0f);
 		}
 		float get_gear_ratio(void)const{
 			return gear_ratio;
 		}
+	};
+
+	//AS5600による制御
+	struct AS5600State:MotorState{
+	private:
+		I2C_HandleTypeDef* i2c;
+		AngleEncoder encoder;
+	public:
+		AS5600State(I2C_HandleTypeDef* _i2c):i2c(_i2c),encoder(12){
+		}
+
+		void i2c_start(void){
+
+		}
+		void i2c_rx_interrupt_task(void){
+
+		}
+
 	};
 
 	class MotorDriver{
