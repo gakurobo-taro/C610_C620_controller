@@ -250,7 +250,9 @@ namespace G24_STM32HAL::RmcBoard{
 
 	void monitor_task(void);
 
+	inline auto control_mode_tmp = std::array<RmcLib::ControlMode,MOTOR_N>{};
 	void emergency_stop_sequence(void);
+	void emergency_stop_release_sequence(void);
 
 #ifdef MOTOR_DEBUG
 	void motor_test(void);

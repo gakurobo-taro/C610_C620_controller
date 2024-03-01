@@ -20,8 +20,8 @@ namespace G24_STM32HAL::RmcBoard{
 	enum class CommonReg:uint16_t{
 		NOP,
 		ID_REQEST,
-		EMERGENCY_STOP = 0x0E,
-		RESET_EMERGENCY_STOP = 0x0F,
+		EMERGENCY_STOP = 0xE,
+		RESET_EMERGENCY_STOP = 0xF,
 	};
 
 	enum class RmcReg:uint16_t{

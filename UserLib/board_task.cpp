@@ -182,7 +182,7 @@ namespace G24_STM32HAL::RmcBoard{
 			emergency_stop_sequence();
 			break;
 		case CommonReg::RESET_EMERGENCY_STOP:
-			//nop
+			emergency_stop_release_sequence();
 			break;
 		default:
 			break;
@@ -212,10 +212,16 @@ namespace G24_STM32HAL::RmcBoard{
 	}
 
 	void emergency_stop_sequence(void){
-		for(auto &d:RmcBoard::driver){
-			d.set_control_mode(RmcLib::ControlMode::PWM_MODE);
+		for(size_t i = 0; i < MOTOR_N; i++){
+			control_mode_tmp.at(i) = driver.at(i).get_control_mode();
+			driver.at(i).set_control_mode(RmcLib::ControlMode::PWM_MODE);
 		}
 		RmcBoard::LED_R.play(RmcLib::LEDPattern::error);
+	}
+	void emergency_stop_release_sequence(void){
+		for(size_t i = 0; i < MOTOR_N; i++){
+			driver.at(i).set_control_mode(control_mode_tmp.at(i));
+		}
 	}
 
 
