@@ -103,16 +103,26 @@ void usb_cdc_rx_callback(const uint8_t *input,size_t size){
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if (htim == RmcBoard::motor_control_timer){
+    	//通信系
     	RmcBoard::usb_cdc.tx_interrupt_task();
     	RmcBoard::send_motor_parameters();
 
+    	//LED
     	RmcBoard::LED_R.update();
     	RmcBoard::LED_G.update();
     	RmcBoard::LED_B.update();
-
     	for(auto &l:RmcBoard::LED){
     		l.update();
     	}
+
+    	//abs enc reading start
+    	for(RmcBoard::abs_enc_reading_n = 0; RmcBoard::abs_enc_reading_n<RmcBoard::MOTOR_N; RmcBoard::abs_enc_reading_n++){
+			if(RmcBoard::driver[RmcBoard::abs_enc_reading_n].get_control_mode() == RmcLib::ControlMode::ABS_POSITION_MODE){
+				HAL_GPIO_WritePin(RmcBoard::i2c_sel.at(RmcBoard::abs_enc_reading_n).port,RmcBoard::i2c_sel.at(RmcBoard::abs_enc_reading_n).pin,GPIO_PIN_SET);
+				RmcBoard::abs_enc.at(RmcBoard::abs_enc_reading_n).read_start();
+				break;
+			}
+		}
 
     	RmcBoard::LED_G.play(RmcLib::LEDPattern::ok);
 
@@ -131,7 +141,34 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 }
 
 void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c){
+	HAL_GPIO_WritePin(RmcBoard::i2c_sel.at(RmcBoard::abs_enc_reading_n).port,RmcBoard::i2c_sel.at(RmcBoard::abs_enc_reading_n).pin,GPIO_PIN_RESET);
+	if(RmcBoard::abs_enc_reading_n == RmcBoard::MOTOR_N-1){
+		return;//最後のエンコーダの処理終了
+	}
 
+	for(++RmcBoard::abs_enc_reading_n; RmcBoard::abs_enc_reading_n<RmcBoard::MOTOR_N; RmcBoard::abs_enc_reading_n++){
+		if(RmcBoard::driver[RmcBoard::abs_enc_reading_n].get_control_mode() == RmcLib::ControlMode::ABS_POSITION_MODE){
+			HAL_GPIO_WritePin(RmcBoard::i2c_sel.at(RmcBoard::abs_enc_reading_n).port,RmcBoard::i2c_sel.at(RmcBoard::abs_enc_reading_n).pin,GPIO_PIN_SET);
+			RmcBoard::abs_enc.at(RmcBoard::abs_enc_reading_n).read_start();
+			return;
+		}
+	}
+}
+void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c){
+	//エンコーダの値が読めないモーターは停止
+	HAL_GPIO_WritePin(RmcBoard::i2c_sel.at(RmcBoard::abs_enc_reading_n).port,RmcBoard::i2c_sel.at(RmcBoard::abs_enc_reading_n).pin,GPIO_PIN_RESET);
+	RmcBoard::driver[RmcBoard::abs_enc_reading_n].set_control_mode(RmcLib::ControlMode::PWM_MODE);
+
+	if(RmcBoard::abs_enc_reading_n == RmcBoard::MOTOR_N-1){
+		return;//最後のエンコーダの処理終了
+	}
+
+	for(++RmcBoard::abs_enc_reading_n; RmcBoard::abs_enc_reading_n<RmcBoard::MOTOR_N; RmcBoard::abs_enc_reading_n++){
+		if(RmcBoard::driver[RmcBoard::abs_enc_reading_n].get_control_mode() == RmcLib::ControlMode::ABS_POSITION_MODE){
+			RmcBoard::abs_enc[RmcBoard::abs_enc_reading_n].read_start();
+			return;
+		}
+	}
 }
 
 /* USER CODE END 0 */

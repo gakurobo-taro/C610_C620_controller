@@ -55,12 +55,13 @@ namespace G24_STM32HAL::RmcBoard{
 	};
 
 	//abs encoder
-	inline auto as5600_sel = std::array<RmcLib::AS5600State,MOTOR_N>{
+	inline auto abs_enc = std::array<RmcLib::AS5600State,MOTOR_N>{
 		RmcLib::AS5600State{&hi2c3,1000.0f},
 		RmcLib::AS5600State{&hi2c3,1000.0f},
 		RmcLib::AS5600State{&hi2c3,1000.0f},
 		RmcLib::AS5600State{&hi2c3,1000.0f},
 	};
+	inline size_t abs_enc_reading_n = 0;
 
 	//timer
 	inline auto *motor_control_timer = &htim14;
