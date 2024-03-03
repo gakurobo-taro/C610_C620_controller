@@ -141,6 +141,9 @@ namespace G24_STM32HAL::RmcBoard{
 			.add((uint16_t)RmcReg::POS_GAIN_P,    CommonLib::DataAccessor::generate<float>([](float pp){driver[0].set_position_gain(set_p_gain(driver[0].get_position_gain(),pp));},[]()->float{return driver[0].get_position_gain().kp;}))
 			.add((uint16_t)RmcReg::POS_GAIN_I,    CommonLib::DataAccessor::generate<float>([](float pi){driver[0].set_position_gain(set_i_gain(driver[0].get_position_gain(),pi));},[]()->float{return driver[0].get_position_gain().ki;}))
 			.add((uint16_t)RmcReg::POS_GAIN_D,    CommonLib::DataAccessor::generate<float>([](float pd){driver[0].set_position_gain(set_d_gain(driver[0].get_position_gain(),pd));},[]()->float{return driver[0].get_position_gain().kd;}))
+			.add((uint16_t)RmcReg::ABS_POS,       CommonLib::DataAccessor::generate<float>([]()->float{return driver[0].get_abs_position();}))
+			.add((uint16_t)RmcReg::ABS_SPD,       CommonLib::DataAccessor::generate<float>([]()->float{return driver[0].get_abs_speed();}))
+			.add((uint16_t)RmcReg::ENC_INV,       CommonLib::DataAccessor::generate<bool>([](bool inv){abs_enc[0].set_enc_inv(inv);},[]()->bool{return abs_enc[0].is_inv();}))
 
 			.add((uint16_t)RmcReg::MONITOR_PERIOD,CommonLib::DataAccessor::generate<uint16_t>([](uint16_t period){set_timer_period(monitor_timer,period);}, []()->uint16_t{return get_timer_period(monitor_timer);}))
 			.add((uint16_t)RmcReg::MONITOR_REG,   CommonLib::DataAccessor::generate<uint64_t>([](uint64_t val){ monitor[0] = std::bitset<0x35+1>{val};}, []()->uint64_t{ return monitor[0].to_ullong();}))
@@ -167,6 +170,9 @@ namespace G24_STM32HAL::RmcBoard{
 			.add((uint16_t)RmcReg::POS_GAIN_P,    CommonLib::DataAccessor::generate<float>([](float pp){driver[1].set_position_gain(set_p_gain(driver[1].get_position_gain(),pp));},[]()->float{return driver[1].get_position_gain().kp;}))
 			.add((uint16_t)RmcReg::POS_GAIN_I,    CommonLib::DataAccessor::generate<float>([](float pi){driver[1].set_position_gain(set_i_gain(driver[1].get_position_gain(),pi));},[]()->float{return driver[1].get_position_gain().ki;}))
 			.add((uint16_t)RmcReg::POS_GAIN_D,    CommonLib::DataAccessor::generate<float>([](float pd){driver[1].set_position_gain(set_d_gain(driver[1].get_position_gain(),pd));},[]()->float{return driver[1].get_position_gain().kd;}))
+			.add((uint16_t)RmcReg::ABS_POS,       CommonLib::DataAccessor::generate<float>([]()->float{return driver[1].get_abs_position();}))
+			.add((uint16_t)RmcReg::ABS_SPD,       CommonLib::DataAccessor::generate<float>([]()->float{return driver[1].get_abs_speed();}))
+			.add((uint16_t)RmcReg::ENC_INV,       CommonLib::DataAccessor::generate<bool>([](bool inv){abs_enc[1].set_enc_inv(inv);},[]()->bool{return abs_enc[1].is_inv();}))
 
 			.add((uint16_t)RmcReg::MONITOR_PERIOD,CommonLib::DataAccessor::generate<uint16_t>([](uint16_t period){set_timer_period(monitor_timer,period);}, []()->uint16_t{return get_timer_period(monitor_timer);}))
 			.add((uint16_t)RmcReg::MONITOR_REG,   CommonLib::DataAccessor::generate<uint64_t>([](uint64_t val){ monitor[1] = std::bitset<0x35+1>{val};}, []()->uint64_t{ return monitor[1].to_ullong();}))
@@ -193,6 +199,9 @@ namespace G24_STM32HAL::RmcBoard{
 			.add((uint16_t)RmcReg::POS_GAIN_P,    CommonLib::DataAccessor::generate<float>([](float pp){driver[2].set_position_gain(set_p_gain(driver[2].get_position_gain(),pp));},[]()->float{return driver[2].get_position_gain().kp;}))
 			.add((uint16_t)RmcReg::POS_GAIN_I,    CommonLib::DataAccessor::generate<float>([](float pi){driver[2].set_position_gain(set_i_gain(driver[2].get_position_gain(),pi));},[]()->float{return driver[2].get_position_gain().ki;}))
 			.add((uint16_t)RmcReg::POS_GAIN_D,    CommonLib::DataAccessor::generate<float>([](float pd){driver[2].set_position_gain(set_d_gain(driver[2].get_position_gain(),pd));},[]()->float{return driver[2].get_position_gain().kd;}))
+			.add((uint16_t)RmcReg::ABS_POS,       CommonLib::DataAccessor::generate<float>([]()->float{return driver[2].get_abs_position();}))
+			.add((uint16_t)RmcReg::ABS_SPD,       CommonLib::DataAccessor::generate<float>([]()->float{return driver[2].get_abs_speed();}))
+			.add((uint16_t)RmcReg::ENC_INV,       CommonLib::DataAccessor::generate<bool>([](bool inv){abs_enc[2].set_enc_inv(inv);},[]()->bool{return abs_enc[2].is_inv();}))
 
 			.add((uint16_t)RmcReg::MONITOR_PERIOD,CommonLib::DataAccessor::generate<uint16_t>([](uint16_t period){set_timer_period(monitor_timer,period);}, []()->uint16_t{return get_timer_period(monitor_timer);}))
 			.add((uint16_t)RmcReg::MONITOR_REG,   CommonLib::DataAccessor::generate<uint64_t>([](uint64_t val){ monitor[2] = std::bitset<0x35+1>{val};}, []()->uint64_t{ return monitor[2].to_ullong();}))
@@ -219,6 +228,9 @@ namespace G24_STM32HAL::RmcBoard{
 			.add((uint16_t)RmcReg::POS_GAIN_P,    CommonLib::DataAccessor::generate<float>([](float pp){driver[3].set_position_gain(set_p_gain(driver[3].get_position_gain(),pp));},[]()->float{return driver[3].get_position_gain().kp;}))
 			.add((uint16_t)RmcReg::POS_GAIN_I,    CommonLib::DataAccessor::generate<float>([](float pi){driver[3].set_position_gain(set_i_gain(driver[3].get_position_gain(),pi));},[]()->float{return driver[3].get_position_gain().ki;}))
 			.add((uint16_t)RmcReg::POS_GAIN_D,    CommonLib::DataAccessor::generate<float>([](float pd){driver[3].set_position_gain(set_d_gain(driver[3].get_position_gain(),pd));},[]()->float{return driver[3].get_position_gain().kd;}))
+			.add((uint16_t)RmcReg::ABS_POS,       CommonLib::DataAccessor::generate<float>([]()->float{return driver[3].get_abs_position();}))
+			.add((uint16_t)RmcReg::ABS_SPD,       CommonLib::DataAccessor::generate<float>([]()->float{return driver[3].get_abs_speed();}))
+			.add((uint16_t)RmcReg::ENC_INV,       CommonLib::DataAccessor::generate<bool>([](bool inv){abs_enc[3].set_enc_inv(inv);},[]()->bool{return abs_enc[3].is_inv();}))
 
 			.add((uint16_t)RmcReg::MONITOR_PERIOD,CommonLib::DataAccessor::generate<uint16_t>([](uint16_t period){set_timer_period(monitor_timer,period);}, []()->uint16_t{return get_timer_period(monitor_timer);}))
 			.add((uint16_t)RmcReg::MONITOR_REG,   CommonLib::DataAccessor::generate<uint64_t>([](uint64_t val){ monitor[3] = std::bitset<0x35+1>{val};}, []()->uint64_t{ return monitor[3].to_ullong();}))
