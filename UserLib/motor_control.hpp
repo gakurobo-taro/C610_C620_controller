@@ -79,6 +79,8 @@ namespace G24_STM32HAL::RmcLib{
 
 		uint16_t enc_val = 0;
 		float rad_old = 0;
+
+		bool inv = false;
 	public:
 		AS5600State(I2C_HandleTypeDef* _i2c,float _freq):i2c(_i2c),encoder(as5600_resolution),freq(_freq){
 		}
@@ -87,8 +89,8 @@ namespace G24_STM32HAL::RmcLib{
 			HAL_I2C_Master_Receive_IT(i2c, as5600_id<<1, (uint8_t*)&enc_val, 2);
 		}
 		void i2c_rx_interrupt_task(void){
-			rad = encoder.update_angle(enc_val);
-			speed = (rad - rad_old)*freq;
+			rad = encoder.update_angle(enc_val)*(inv?-1.0f:1.0f);
+			speed = (rad - rad_old)*freq*(inv?-1.0f:1.0f);
 			rad_old = rad;
 		}
 	};
@@ -101,6 +103,7 @@ namespace G24_STM32HAL::RmcLib{
 		float target_rad;
 		float origin;
 		MotorState state;
+		MotorState abs_state;
 
 		PID speed_pid = PIDBuilder(1000.0f).set_limit(-1.0f,1.0f).build();
 		PID position_pid = PIDBuilder(1000.0f).set_limit(-7.0f,7.0f).build();
@@ -134,8 +137,12 @@ namespace G24_STM32HAL::RmcLib{
 		float get_current_low_position(void)const{return state.rad; }
 		PIDGain get_position_gain(void)const{return position_pid.get_gain();}
 
+		//abs position
+		float get_abs_position(void){return abs_state.rad;};
+		float get_abs_speed(void){return abs_state.speed;};
+
 		//pid operation
-		float update_operation_val(const MotorState &_state);
+		float update_operation_val(const MotorState &_state,const MotorState &_abs_state);
 	};
 }
 

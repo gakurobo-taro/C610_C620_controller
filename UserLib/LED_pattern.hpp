@@ -36,10 +36,23 @@ namespace G24_STM32HAL::RmcLib::LEDPattern{
 
 			{false,0},
 	};
-	inline const auto led_mode = std::array<LEDState *,3>{
-		const_cast<LEDState*>(pwm_mode),
-		const_cast<LEDState*>(speed_mode),
-		const_cast<LEDState*>(position_mode),
+	inline const LEDState abs_position_mode[] = {
+			{true,100},
+			{false,100},
+			{true,100},
+			{false,100},
+			{true,100},
+			{false,100},
+			{true,100},
+			{false,300},
+
+			{false,0},
+	};
+	inline const auto led_mode = std::array<const LEDState *,4>{
+		pwm_mode,
+		speed_mode,
+		position_mode,
+		abs_position_mode,
 	};
 
 	inline const LEDState ok[] = {

@@ -47,7 +47,7 @@ namespace G24_STM32HAL::RmcBoard{
 				}
 
 				motor_state[id].update(rx_frame);
-				driver[id].update_operation_val(motor_state[id]);
+				driver[id].update_operation_val(motor_state[id],abs_enc[id]);
 
 				if(!LED[id].is_playing()){
 					LED[id].play(RmcLib::LEDPattern::led_mode.at((uint8_t)driver[id].get_control_mode()));
