@@ -48,6 +48,8 @@ namespace G24_STM32HAL::RmcBoard{
 		POS_GAIN_P,
 		POS_GAIN_I,
 		POS_GAIN_D,
+		ABS_POS,
+		ABS_SPD,
 		ENC_INV,
 
 		MONITOR_PERIOD = 0xF0,

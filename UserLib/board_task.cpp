@@ -32,6 +32,10 @@ namespace G24_STM32HAL::RmcBoard{
 			d.set_position_gain({1.0f, 0.5f, 0.0f});
 			d.set_speed_limit(-1.0f,1.0f);
 		}
+
+		for(auto &enc:abs_enc){
+			enc.start();
+		}
 	}
 
 	//受信したモーター情報の処理

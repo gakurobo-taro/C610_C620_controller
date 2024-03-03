@@ -73,6 +73,8 @@ namespace G24_STM32HAL::RmcLib{
 		static constexpr size_t as5600_resolution = 12;
 		static constexpr float ks = 2*M_PI/(float)((1<<as5600_resolution)-1);
 
+		GPIO_TypeDef *port;
+		const uint16_t pin;
 		I2C_HandleTypeDef* i2c;
 		AngleEncoder encoder;
 		const float freq;
@@ -80,19 +82,31 @@ namespace G24_STM32HAL::RmcLib{
 		uint16_t enc_val = 0;
 		float rad_old = 0;
 
-		bool inv = false;
+		float inv = 1.0f;
 	public:
-		AS5600State(I2C_HandleTypeDef* _i2c,float _freq):i2c(_i2c),encoder(as5600_resolution),freq(_freq){
+		AS5600State(I2C_HandleTypeDef* _i2c,float _freq,GPIO_TypeDef *_port,uint16_t _pin)
+		:i2c(_i2c),encoder(as5600_resolution),freq(_freq),port(_port),pin(_pin){
+		}
+
+		void start(void){
+			HAL_GPIO_WritePin(port,pin,GPIO_PIN_SET);
+			uint8_t reg = 0x0c;
+			HAL_I2C_Master_Transmit(i2c, as5600_id<<1, &reg, 1,100);
+			HAL_GPIO_WritePin(port,pin,GPIO_PIN_RESET);
 		}
 
 		void read_start(void){
+			HAL_GPIO_WritePin(port,pin,GPIO_PIN_SET);
 			HAL_I2C_Master_Receive_IT(i2c, as5600_id<<1, (uint8_t*)&enc_val, 2);
 		}
 		void i2c_rx_interrupt_task(void){
-			rad = encoder.update_angle(enc_val)*(inv?-1.0f:1.0f);
-			speed = (rad - rad_old)*freq*(inv?-1.0f:1.0f);
+			HAL_GPIO_WritePin(port,pin,GPIO_PIN_RESET);
+			rad = encoder.update_angle(enc_val)*inv;
+			speed = (rad - rad_old)*freq*inv;
 			rad_old = rad;
 		}
+		void set_enc_inv(bool _inv){inv = _inv?-1.0f:1.0f;}
+		bool is_inv(void){return inv<0.0f?true:false;}
 	};
 
 	class MotorDriver{
