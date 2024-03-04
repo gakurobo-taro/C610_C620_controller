@@ -19,8 +19,13 @@ namespace G24_STM32HAL::RmcBoard{
 
 	//各クラス起動処理
 	void init(void){
+		int id = read_board_id();
+
+		can_main.set_filter_mask(16, 0x00200000|(id<<16), 0x00FF0000, CommonLib::FilterMode::STD_AND_EXT, true);
+		can_main.set_filter_mask(17, 0x00000000|(id<<16), 0x00FF0000, CommonLib::FilterMode::STD_AND_EXT, true);
+		can_main.set_filter_mask(18, 0x00F00000, 0x00F00000, CommonLib::FilterMode::STD_AND_EXT, true);
 		can_main.start();
-		can_main.set_filter_free(16);
+
 		can_c6x0.start();
 		can_c6x0.set_filter_free(0);
 		LED_R.start();
