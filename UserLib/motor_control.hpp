@@ -43,7 +43,7 @@ namespace G24_STM32HAL::RmcLib{
 			gear_ratio(_gear_ratio),gear_ratio_inv(1/_gear_ratio),
 			ks(2*M_PI/(gear_ratio*60.0f)),encoder(13){}
 
-		bool update(CommonLib::CanFrame frame){
+		bool update(const CommonLib::CanFrame &frame){
 			if(frame.is_ext_id || frame.is_remote || frame.data_length != 8 || !(0x200&frame.id)){
 				return false;
 			}
