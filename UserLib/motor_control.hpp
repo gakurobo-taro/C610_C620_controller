@@ -106,7 +106,7 @@ namespace G24_STM32HAL::RmcLib{
 			rad_old = rad;
 		}
 		void set_enc_inv(bool _inv){inv = _inv?-1.0f:1.0f;}
-		bool is_inv(void){return inv<0.0f?true:false;}
+		bool is_inv(void)const{return inv<0.0f?true:false;}
 	};
 
 	class MotorDriver{
@@ -120,7 +120,7 @@ namespace G24_STM32HAL::RmcLib{
 		MotorState abs_state;
 
 		PID speed_pid = PIDBuilder(1000.0f).set_limit(-1.0f,1.0f).build();
-		PID position_pid = PIDBuilder(1000.0f).set_limit(-7.0f,7.0f).build();
+		PID position_pid = PIDBuilder(1000.0f).set_limit(-42.0f,42.0f).build();
 	public:
 		//mode setting
 		void set_control_mode(ControlMode _mode);

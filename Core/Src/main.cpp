@@ -117,7 +117,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
     	//abs enc reading start
     	RmcBoard::abs_enc_reading_n = 0;
-		RmcBoard::abs_enc.at(RmcBoard::abs_enc_reading_n).read_start();
+		//RmcBoard::abs_enc.at(RmcBoard::abs_enc_reading_n).read_start();
 
 		//OK
     	RmcBoard::LED_G.play(RmcLib::LEDPattern::ok);

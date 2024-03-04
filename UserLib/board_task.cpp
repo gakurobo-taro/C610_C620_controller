@@ -29,8 +29,8 @@ namespace G24_STM32HAL::RmcBoard{
 
 		for(auto &d:driver){
 			d.set_speed_gain({0.5f, 0.2f, 0.0f});
-			d.set_position_gain({1.0f, 0.5f, 0.0f});
-			d.set_speed_limit(-1.0f,1.0f);
+			d.set_position_gain({6.0f, 3.0f, 0.0f});
+			d.set_speed_limit(-6.0f,6.0f);
 		}
 
 		for(auto &enc:abs_enc){
