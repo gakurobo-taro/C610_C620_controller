@@ -10,15 +10,14 @@
 
 #include "board_info.hpp"
 
-#include "motor_control.hpp"
+
 #include "LED_control.hpp"
 #include "LED_pattern.hpp"
 #include "STM32HAL_CommonLib/can_comm.hpp"
-#include "STM32HAL_CommonLib/pwm.hpp"
 #include "STM32HAL_CommonLib/data_packet.hpp"
 #include "STM32HAL_CommonLib/data_convert.hpp"
 #include "STM32HAL_CommonLib/serial_comm.hpp"
-#include "STM32HAL_CommonLib/id_map_control.hpp"
+
 
 #include "main.h"
 #include "can.h"
@@ -47,15 +46,6 @@ namespace G24_STM32HAL::RmcBoard{
 		GPIOParam{ID2_GPIO_Port,ID2_Pin},
 		GPIOParam{ID3_GPIO_Port,ID3_Pin},
 	};
-
-	//abs encoder
-	inline auto abs_enc = std::array<RmcLib::AS5600State,MOTOR_N>{
-		RmcLib::AS5600State{&hi2c3,1000.0f,I2C_SEL1_GPIO_Port,I2C_SEL1_Pin},
-		RmcLib::AS5600State{&hi2c3,1000.0f,I2C_SEL2_GPIO_Port,I2C_SEL2_Pin},
-		RmcLib::AS5600State{&hi2c3,1000.0f,I2C_SEL3_GPIO_Port,I2C_SEL3_Pin},
-		RmcLib::AS5600State{&hi2c3,1000.0f,I2C_SEL4_GPIO_Port,I2C_SEL4_Pin},
-	};
-	inline size_t abs_enc_reading_n = 0;
 
 	//timer
 	inline auto *motor_control_timer = &htim14;
@@ -100,130 +90,11 @@ namespace G24_STM32HAL::RmcBoard{
 	inline auto can_main = CommonLib::CanComm<4,4>{&hcan2,CAN_RX_FIFO1,CAN_FILTER_FIFO1,CAN_IT_RX_FIFO1_MSG_PENDING};
 	inline auto can_c6x0 = CommonLib::CanComm<4,4>{&hcan1,CAN_RX_FIFO0,CAN_FILTER_FIFO0,CAN_IT_RX_FIFO0_MSG_PENDING};
 
-	//motors
-	inline auto driver = std::array<RmcLib::MotorDriver,MOTOR_N>{};
-	inline auto motor_state = std::array<RmcLib::C6x0State,MOTOR_N>{
-		RmcLib::C6x0State{36.0f},
-		RmcLib::C6x0State{36.0f},
-		RmcLib::C6x0State{36.0f},
-		RmcLib::C6x0State{36.0f}
-	};
-
 	//usb
 	inline auto usb_cdc = CommonLib::UsbCdcComm<4,4>{&hUsbDeviceFS};
 
-	//monitor
-	inline auto monitor = std::array<std::bitset<0x35+1>,MOTOR_N>{};
+	//driver
 
-	inline auto set_p_gain = [](RmcLib::PIDGain g,float p)->RmcLib::PIDGain {g.kp = p; return g;};
-	inline auto set_i_gain = [](RmcLib::PIDGain g,float i)->RmcLib::PIDGain {g.kp = i; return g;};
-	inline auto set_d_gain = [](RmcLib::PIDGain g,float d)->RmcLib::PIDGain {g.kp = d; return g;};
-
-	inline auto id_map = std::array<CommonLib::IDMap,MOTOR_N>{
-			CommonLib::IDMapBuilder()
-				.add((uint16_t)RmcReg::CONTROL_TYPE,  CommonLib::DataAccessor::generate<RmcLib::ControlMode>([](RmcLib::ControlMode m)mutable{driver[0].set_control_mode(m);},[]()->RmcLib::ControlMode{return driver[0].get_control_mode();}))
-				.add((uint16_t)RmcReg::GEAR_RATIO,    CommonLib::DataAccessor::generate<float>([](float ratio)mutable{motor_state[0].set_gear_ratio(ratio);},[]()->float{return motor_state[0].get_gear_ratio();}))
-				.add((uint16_t)RmcReg::CAN_TIMEOUT,   CommonLib::DataAccessor::generate<uint16_t>([](uint16_t period)mutable{timeout_en_flag = false; set_timer_period(can_timeout_timer,period);},[]()->uint16_t{return get_timer_period(can_timeout_timer);}))
-
-				.add((uint16_t)RmcReg::PWM,           CommonLib::DataAccessor::generate<float>([]()->float{return driver[0].get_pwm();}))
-				.add((uint16_t)RmcReg::PWM_TARGET,    CommonLib::DataAccessor::generate<float>([](float pwm)mutable{driver[0].set_pwm(pwm);},[]()->float{return driver[0].get_pwm();}))
-
-				.add((uint16_t)RmcReg::SPD,           CommonLib::DataAccessor::generate<float>([]()->float{return driver[0].get_current_speed();}))
-				.add((uint16_t)RmcReg::SPD_TARGET,    CommonLib::DataAccessor::generate<float>([](float st)mutable{driver[0].set_target_speed(st);},[]()->float{return driver[0].get_target_speed();}))
-				.add((uint16_t)RmcReg::PWM_LIM,       CommonLib::DataAccessor::generate<float>([](float pl)mutable{driver[0].set_pwm_limit(pl);}))
-				.add((uint16_t)RmcReg::SPD_GAIN_P,    CommonLib::DataAccessor::generate<float>([](float sp)mutable{driver[0].set_speed_gain(set_p_gain(driver[0].get_speed_gain(),sp));},[]()->float{return driver[0].get_speed_gain().kp;}))
-				.add((uint16_t)RmcReg::SPD_GAIN_I,    CommonLib::DataAccessor::generate<float>([](float si)mutable{driver[0].set_speed_gain(set_i_gain(driver[0].get_speed_gain(),si));},[]()->float{return driver[0].get_speed_gain().ki;}))
-				.add((uint16_t)RmcReg::SPD_GAIN_D,    CommonLib::DataAccessor::generate<float>([](float sd)mutable{driver[0].set_speed_gain(set_d_gain(driver[0].get_speed_gain(),sd));},[]()->float{return driver[0].get_speed_gain().kd;}))
-
-				.add((uint16_t)RmcReg::POS,           CommonLib::DataAccessor::generate<float>([](float pos)mutable{driver[0].set_origin(driver[0].get_current_low_position()-pos);},[]()->float{return driver[0].get_current_position();}))
-				.add((uint16_t)RmcReg::POS_TARGET,    CommonLib::DataAccessor::generate<float>([](float pt)mutable{driver[0].set_target_position(pt);},[]()->float{return driver[0].get_target_position();}))
-				.add((uint16_t)RmcReg::SPD_LIM,       CommonLib::DataAccessor::generate<float>([](float sl)mutable{driver[0].set_speed_limit(sl);}))
-				.add((uint16_t)RmcReg::POS_GAIN_P,    CommonLib::DataAccessor::generate<float>([](float pp)mutable{driver[0].set_position_gain(set_p_gain(driver[0].get_position_gain(),pp));},[]()->float{return driver[0].get_position_gain().kp;}))
-				.add((uint16_t)RmcReg::POS_GAIN_I,    CommonLib::DataAccessor::generate<float>([](float pi)mutable{driver[0].set_position_gain(set_i_gain(driver[0].get_position_gain(),pi));},[]()->float{return driver[0].get_position_gain().ki;}))
-				.add((uint16_t)RmcReg::POS_GAIN_D,    CommonLib::DataAccessor::generate<float>([](float pd)mutable{driver[0].set_position_gain(set_d_gain(driver[0].get_position_gain(),pd));},[]()->float{return driver[0].get_position_gain().kd;}))
-
-				.add((uint16_t)RmcReg::MONITOR_PERIOD,CommonLib::DataAccessor::generate<uint16_t>([](uint16_t period)mutable{set_timer_period(monitor_timer,period);}, []()mutable->uint16_t{return get_timer_period(monitor_timer);}))
-				.add((uint16_t)RmcReg::MONITOR_REG,   CommonLib::DataAccessor::generate<uint64_t>([](uint64_t val)mutable{ monitor[0] = std::bitset<0x35+1>{val};}, []()mutable->uint64_t{ return monitor[0].to_ullong();}))
-				.build(),
-
-			CommonLib::IDMapBuilder()
-				.add((uint16_t)RmcReg::CONTROL_TYPE,  CommonLib::DataAccessor::generate<RmcLib::ControlMode>([](RmcLib::ControlMode m)mutable{driver[1].set_control_mode(m);},[]()->RmcLib::ControlMode{return driver[1].get_control_mode();}))
-				.add((uint16_t)RmcReg::GEAR_RATIO,    CommonLib::DataAccessor::generate<float>([](float ratio)mutable{motor_state[1].set_gear_ratio(ratio);},[]()->float{return motor_state[1].get_gear_ratio();}))
-				.add((uint16_t)RmcReg::CAN_TIMEOUT,   CommonLib::DataAccessor::generate<uint16_t>([](uint16_t period)mutable{timeout_en_flag = false; set_timer_period(can_timeout_timer,period);},[]()->uint16_t{return get_timer_period(can_timeout_timer);}))
-
-				.add((uint16_t)RmcReg::PWM,           CommonLib::DataAccessor::generate<float>([]()->float{return driver[1].get_pwm();}))
-				.add((uint16_t)RmcReg::PWM_TARGET,    CommonLib::DataAccessor::generate<float>([](float pwm)mutable{driver[1].set_pwm(pwm);},[]()->float{return driver[1].get_pwm();}))
-
-				.add((uint16_t)RmcReg::SPD,           CommonLib::DataAccessor::generate<float>([]()->float{return driver[1].get_current_speed();}))
-				.add((uint16_t)RmcReg::SPD_TARGET,    CommonLib::DataAccessor::generate<float>([](float st)mutable{driver[1].set_target_speed(st);},[]()->float{return driver[1].get_target_speed();}))
-				.add((uint16_t)RmcReg::PWM_LIM,       CommonLib::DataAccessor::generate<float>([](float pl)mutable{driver[1].set_pwm_limit(pl);}))
-				.add((uint16_t)RmcReg::SPD_GAIN_P,    CommonLib::DataAccessor::generate<float>([](float sp)mutable{driver[1].set_speed_gain(set_p_gain(driver[1].get_speed_gain(),sp));},[]()->float{return driver[1].get_speed_gain().kp;}))
-				.add((uint16_t)RmcReg::SPD_GAIN_I,    CommonLib::DataAccessor::generate<float>([](float si)mutable{driver[1].set_speed_gain(set_i_gain(driver[1].get_speed_gain(),si));},[]()->float{return driver[1].get_speed_gain().ki;}))
-				.add((uint16_t)RmcReg::SPD_GAIN_D,    CommonLib::DataAccessor::generate<float>([](float sd)mutable{driver[1].set_speed_gain(set_d_gain(driver[1].get_speed_gain(),sd));},[]()->float{return driver[1].get_speed_gain().kd;}))
-
-				.add((uint16_t)RmcReg::POS,           CommonLib::DataAccessor::generate<float>([](float pos)mutable{driver[1].set_origin(driver[1].get_current_low_position()-pos);},[]()->float{return driver[1].get_current_position();}))
-				.add((uint16_t)RmcReg::POS_TARGET,    CommonLib::DataAccessor::generate<float>([](float pt)mutable{driver[1].set_target_position(pt);},[]()->float{return driver[1].get_target_position();}))
-				.add((uint16_t)RmcReg::SPD_LIM,       CommonLib::DataAccessor::generate<float>([](float sl)mutable{driver[1].set_speed_limit(sl);}))
-				.add((uint16_t)RmcReg::POS_GAIN_P,    CommonLib::DataAccessor::generate<float>([](float pp)mutable{driver[1].set_position_gain(set_p_gain(driver[1].get_position_gain(),pp));},[]()->float{return driver[1].get_position_gain().kp;}))
-				.add((uint16_t)RmcReg::POS_GAIN_I,    CommonLib::DataAccessor::generate<float>([](float pi)mutable{driver[1].set_position_gain(set_i_gain(driver[1].get_position_gain(),pi));},[]()->float{return driver[1].get_position_gain().ki;}))
-				.add((uint16_t)RmcReg::POS_GAIN_D,    CommonLib::DataAccessor::generate<float>([](float pd)mutable{driver[1].set_position_gain(set_d_gain(driver[1].get_position_gain(),pd));},[]()->float{return driver[1].get_position_gain().kd;}))
-
-				.add((uint16_t)RmcReg::MONITOR_PERIOD,CommonLib::DataAccessor::generate<uint16_t>([](uint16_t period)mutable{set_timer_period(monitor_timer,period);}, []()->uint16_t{return get_timer_period(monitor_timer);}))
-				.add((uint16_t)RmcReg::MONITOR_REG,   CommonLib::DataAccessor::generate<uint64_t>([](uint64_t val)mutable{ monitor[1] = std::bitset<0x35+1>{val};}, []()->uint64_t{ return monitor[1].to_ullong();}))
-				.build(),
-
-			CommonLib::IDMapBuilder()
-				.add((uint16_t)RmcReg::CONTROL_TYPE,  CommonLib::DataAccessor::generate<RmcLib::ControlMode>([](RmcLib::ControlMode m)mutable{driver[2].set_control_mode(m);},[]()->RmcLib::ControlMode{return driver[2].get_control_mode();}))
-				.add((uint16_t)RmcReg::GEAR_RATIO,    CommonLib::DataAccessor::generate<float>([](float ratio)mutable{motor_state[2].set_gear_ratio(ratio);},[]()->float{return motor_state[2].get_gear_ratio();}))
-				.add((uint16_t)RmcReg::CAN_TIMEOUT,   CommonLib::DataAccessor::generate<uint16_t>([](uint16_t period)mutable{timeout_en_flag = false;set_timer_period(can_timeout_timer,period);},[]()->uint16_t{return get_timer_period(can_timeout_timer);}))
-
-				.add((uint16_t)RmcReg::PWM,           CommonLib::DataAccessor::generate<float>([]()->float{return driver[2].get_pwm();}))
-				.add((uint16_t)RmcReg::PWM_TARGET,    CommonLib::DataAccessor::generate<float>([](float pwm)mutable{driver[2].set_pwm(pwm);},[]()->float{return driver[2].get_pwm();}))
-
-				.add((uint16_t)RmcReg::SPD,           CommonLib::DataAccessor::generate<float>([]()->float{return driver[2].get_current_speed();}))
-				.add((uint16_t)RmcReg::SPD_TARGET,    CommonLib::DataAccessor::generate<float>([](float st)mutable{driver[2].set_target_speed(st);},[]()->float{return driver[2].get_target_speed();}))
-				.add((uint16_t)RmcReg::PWM_LIM,       CommonLib::DataAccessor::generate<float>([](float pl)mutable{driver[2].set_pwm_limit(pl);}))
-				.add((uint16_t)RmcReg::SPD_GAIN_P,    CommonLib::DataAccessor::generate<float>([](float sp)mutable{driver[2].set_speed_gain(set_p_gain(driver[2].get_speed_gain(),sp));},[]()->float{return driver[2].get_speed_gain().kp;}))
-				.add((uint16_t)RmcReg::SPD_GAIN_I,    CommonLib::DataAccessor::generate<float>([](float si)mutable{driver[2].set_speed_gain(set_i_gain(driver[2].get_speed_gain(),si));},[]()->float{return driver[2].get_speed_gain().ki;}))
-				.add((uint16_t)RmcReg::SPD_GAIN_D,    CommonLib::DataAccessor::generate<float>([](float sd)mutable{driver[2].set_speed_gain(set_d_gain(driver[2].get_speed_gain(),sd));},[]()->float{return driver[2].get_speed_gain().kd;}))
-
-				.add((uint16_t)RmcReg::POS,           CommonLib::DataAccessor::generate<float>([](float pos)mutable{driver[2].set_origin(driver[2].get_current_low_position()-pos);},[]()->float{return driver[2].get_current_position();}))
-				.add((uint16_t)RmcReg::POS_TARGET,    CommonLib::DataAccessor::generate<float>([](float pt)mutable{driver[2].set_target_position(pt);},[]()->float{return driver[2].get_target_position();}))
-				.add((uint16_t)RmcReg::SPD_LIM,       CommonLib::DataAccessor::generate<float>([](float sl)mutable{driver[2].set_speed_limit(sl);}))
-				.add((uint16_t)RmcReg::POS_GAIN_P,    CommonLib::DataAccessor::generate<float>([](float pp)mutable{driver[2].set_position_gain(set_p_gain(driver[2].get_position_gain(),pp));},[]()->float{return driver[2].get_position_gain().kp;}))
-				.add((uint16_t)RmcReg::POS_GAIN_I,    CommonLib::DataAccessor::generate<float>([](float pi)mutable{driver[2].set_position_gain(set_i_gain(driver[2].get_position_gain(),pi));},[]()->float{return driver[2].get_position_gain().ki;}))
-				.add((uint16_t)RmcReg::POS_GAIN_D,    CommonLib::DataAccessor::generate<float>([](float pd)mutable{driver[2].set_position_gain(set_d_gain(driver[2].get_position_gain(),pd));},[]()->float{return driver[2].get_position_gain().kd;}))
-
-				.add((uint16_t)RmcReg::MONITOR_PERIOD,CommonLib::DataAccessor::generate<uint16_t>([](uint16_t period)mutable{set_timer_period(monitor_timer,period);}, []()->uint16_t{return get_timer_period(monitor_timer);}))
-				.add((uint16_t)RmcReg::MONITOR_REG,   CommonLib::DataAccessor::generate<uint64_t>([](uint64_t val)mutable{ monitor[2] = std::bitset<0x35+1>{val};}, []()->uint64_t{ return monitor[2].to_ullong();}))
-				.build(),
-
-			CommonLib::IDMapBuilder()
-				.add((uint16_t)RmcReg::CONTROL_TYPE,  CommonLib::DataAccessor::generate<RmcLib::ControlMode>([](RmcLib::ControlMode m)mutable{driver[3].set_control_mode(m);},[]()->RmcLib::ControlMode{return driver[3].get_control_mode();}))
-				.add((uint16_t)RmcReg::GEAR_RATIO,    CommonLib::DataAccessor::generate<float>([](float ratio)mutable{motor_state[3].set_gear_ratio(ratio);},[]()->float{return motor_state[3].get_gear_ratio();}))
-				.add((uint16_t)RmcReg::CAN_TIMEOUT,   CommonLib::DataAccessor::generate<uint16_t>([](uint16_t period)mutable{timeout_en_flag = false;set_timer_period(can_timeout_timer,period);},[]()->uint16_t{return get_timer_period(can_timeout_timer);}))
-
-				.add((uint16_t)RmcReg::PWM,           CommonLib::DataAccessor::generate<float>([]()->float{return driver[3].get_pwm();}))
-				.add((uint16_t)RmcReg::PWM_TARGET,    CommonLib::DataAccessor::generate<float>([](float pwm)mutable{driver[3].set_pwm(pwm);},[]()->float{return driver[3].get_pwm();}))
-
-				.add((uint16_t)RmcReg::SPD,           CommonLib::DataAccessor::generate<float>([]()->float{return driver[3].get_current_speed();}))
-				.add((uint16_t)RmcReg::SPD_TARGET,    CommonLib::DataAccessor::generate<float>([](float st)mutable{driver[3].set_target_speed(st);},[]()->float{return driver[3].get_target_speed();}))
-				.add((uint16_t)RmcReg::PWM_LIM,       CommonLib::DataAccessor::generate<float>([](float pl)mutable{driver[3].set_pwm_limit(pl);}))
-				.add((uint16_t)RmcReg::SPD_GAIN_P,    CommonLib::DataAccessor::generate<float>([](float sp)mutable{driver[3].set_speed_gain(set_p_gain(driver[3].get_speed_gain(),sp));},[]()->float{return driver[3].get_speed_gain().kp;}))
-				.add((uint16_t)RmcReg::SPD_GAIN_I,    CommonLib::DataAccessor::generate<float>([](float si)mutable{driver[3].set_speed_gain(set_i_gain(driver[3].get_speed_gain(),si));},[]()->float{return driver[3].get_speed_gain().ki;}))
-				.add((uint16_t)RmcReg::SPD_GAIN_D,    CommonLib::DataAccessor::generate<float>([](float sd)mutable{driver[3].set_speed_gain(set_d_gain(driver[3].get_speed_gain(),sd));},[]()->float{return driver[3].get_speed_gain().kd;}))
-
-				.add((uint16_t)RmcReg::POS,           CommonLib::DataAccessor::generate<float>([](float pos)mutable{driver[3].set_origin(driver[3].get_current_low_position()-pos);},[]()->float{return driver[3].get_current_position();}))
-				.add((uint16_t)RmcReg::POS_TARGET,    CommonLib::DataAccessor::generate<float>([](float pt)mutable{driver[3].set_target_position(pt);},[]()->float{return driver[3].get_target_position();}))
-				.add((uint16_t)RmcReg::SPD_LIM,       CommonLib::DataAccessor::generate<float>([](float sl)mutable{driver[3].set_speed_limit(sl);}))
-				.add((uint16_t)RmcReg::POS_GAIN_P,    CommonLib::DataAccessor::generate<float>([](float pp)mutable{driver[3].set_position_gain(set_p_gain(driver[3].get_position_gain(),pp));},[]()->float{return driver[3].get_position_gain().kp;}))
-				.add((uint16_t)RmcReg::POS_GAIN_I,    CommonLib::DataAccessor::generate<float>([](float pi)mutable{driver[3].set_position_gain(set_i_gain(driver[3].get_position_gain(),pi));},[]()->float{return driver[3].get_position_gain().ki;}))
-				.add((uint16_t)RmcReg::POS_GAIN_D,    CommonLib::DataAccessor::generate<float>([](float pd)mutable{driver[3].set_position_gain(set_d_gain(driver[3].get_position_gain(),pd));},[]()->float{return driver[3].get_position_gain().kd;}))
-
-				.add((uint16_t)RmcReg::MONITOR_PERIOD,CommonLib::DataAccessor::generate<uint16_t>([](uint16_t period)mutable{set_timer_period(monitor_timer,period);}, []()->uint16_t{return get_timer_period(monitor_timer);}))
-				.add((uint16_t)RmcReg::MONITOR_REG,   CommonLib::DataAccessor::generate<uint64_t>([](uint64_t val)mutable{ monitor[3] = std::bitset<0x35+1>{val};}, []()->uint64_t{ return monitor[3].to_ullong();}))
-				.build(),
-		};
 
 	//functions
 	uint8_t read_board_id(void);
