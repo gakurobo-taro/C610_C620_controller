@@ -8,8 +8,8 @@
 #ifndef BOARD_TASK_HPP_
 #define BOARD_TASK_HPP_
 
-#include "board_info.hpp"
 
+#include "motor_unit.hpp"
 
 #include "LED_control.hpp"
 #include "LED_pattern.hpp"
@@ -48,43 +48,14 @@ namespace G24_STM32HAL::RmcBoard{
 	};
 
 	//timer
-	inline auto *motor_control_timer = &htim14;
-	inline auto *monitor_timer = &htim13;
-	inline auto *can_timeout_timer = &htim12;
-
-	inline bool timeout_en_flag = false;
-
-	inline auto set_timer_period = [](TIM_HandleTypeDef *tim,uint16_t val){
-		if(val == 0){
-			HAL_TIM_Base_Stop_IT(tim);
-		}else{
-			__HAL_TIM_SET_AUTORELOAD(tim,val);
-			__HAL_TIM_SET_COUNTER(tim,0);
-
-			if(HAL_TIM_Base_GetState(tim) == HAL_TIM_STATE_READY){
-				HAL_TIM_Base_Start_IT(tim);
-			}
-		}
-	};
-	inline auto get_timer_period = [](TIM_HandleTypeDef *tim)->uint16_t{
-		if(HAL_TIM_Base_GetState(tim) == HAL_TIM_STATE_BUSY){
-			return __HAL_TIM_GET_AUTORELOAD(tim);
-		}else{
-			return 0;
-		}
-	};
+	inline auto motor_control_timer = RmcLib::InterruptionTimerHard(&htim14);
+	inline auto monitor_timer = RmcLib::InterruptionTimerHard(&htim13);
+	inline auto can_timeout_timer = RmcLib::InterruptionTimerHard(&htim12);
 
 	//LEDs
 	inline auto LED_R = RmcLib::LEDPWM{&htim5,TIM_CHANNEL_1};
 	inline auto LED_G = RmcLib::LEDPWM{&htim5,TIM_CHANNEL_2};
 	inline auto LED_B = RmcLib::LEDPWM{&htim5,TIM_CHANNEL_3};
-
-	inline auto LED = std::array<RmcLib::LEDGPIO,MOTOR_N>{
-		RmcLib::LEDGPIO{RM_LED1_GPIO_Port,RM_LED1_Pin},
-		RmcLib::LEDGPIO{RM_LED2_GPIO_Port,RM_LED2_Pin},
-		RmcLib::LEDGPIO{RM_LED3_GPIO_Port,RM_LED3_Pin},
-		RmcLib::LEDGPIO{RM_LED4_GPIO_Port,RM_LED4_Pin},
-	};
 
 	//can
 	inline auto can_main = CommonLib::CanComm<4,4>{&hcan2,CAN_RX_FIFO1,CAN_FILTER_FIFO1,CAN_IT_RX_FIFO1_MSG_PENDING};
@@ -94,6 +65,41 @@ namespace G24_STM32HAL::RmcBoard{
 	inline auto usb_cdc = CommonLib::UsbCdcComm<4,4>{&hUsbDeviceFS};
 
 	//driver
+	inline auto motor = std::array<RmcBoard::MotorUnit,MOTOR_N>{
+		RmcBoard::MotorUnitBuilder()
+				.set_LED(RM_LED1_GPIO_Port,RM_LED1_Pin)
+				.set_gear_ratio(36.0)
+				.set_i2c_encoder(&hi2c3,1000.0f,I2C_SEL1_GPIO_Port,I2C_SEL1_Pin)
+				.set_timeout_timer(&can_timeout_timer)
+				.set_monitor_timer(&monitor_timer)
+				.build(),
+
+		RmcBoard::MotorUnitBuilder()
+				.set_LED(RM_LED2_GPIO_Port,RM_LED2_Pin)
+				.set_gear_ratio(36.0)
+				.set_i2c_encoder(&hi2c3,1000.0f,I2C_SEL2_GPIO_Port,I2C_SEL2_Pin)
+				.set_timeout_timer(&can_timeout_timer)
+				.set_monitor_timer(&monitor_timer)
+				.build(),
+
+		RmcBoard::MotorUnitBuilder()
+				.set_LED(RM_LED3_GPIO_Port,RM_LED3_Pin)
+				.set_gear_ratio(36.0)
+				.set_i2c_encoder(&hi2c3,1000,I2C_SEL3_GPIO_Port,I2C_SEL3_Pin)
+				.set_timeout_timer(&can_timeout_timer)
+				.set_monitor_timer(&monitor_timer)
+				.build(),
+
+		RmcBoard::MotorUnitBuilder()
+				.set_LED(RM_LED4_GPIO_Port,RM_LED4_Pin)
+				.set_gear_ratio(36.0)
+				.set_i2c_encoder(&hi2c3,1000,I2C_SEL4_GPIO_Port,I2C_SEL4_Pin)
+				.set_timeout_timer(&can_timeout_timer)
+				.set_monitor_timer(&monitor_timer)
+				.build(),
+	};
+
+	inline size_t abs_enc_reading_n = 0;
 
 
 	//functions

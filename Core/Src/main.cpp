@@ -89,75 +89,52 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 }
 void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan){
 	RmcBoard::can_main.rx_interrupt_task();
-	__HAL_TIM_SET_COUNTER(RmcBoard::can_timeout_timer,0);
+	__HAL_TIM_SET_COUNTER(RmcBoard::can_timeout_timer.get_handler(),0);
 	RmcBoard::LED_B.play(RmcLib::LEDPattern::ok);
 }
 
 void usb_cdc_rx_callback(const uint8_t *input,size_t size){
 	RmcBoard::usb_cdc.rx_interrupt_task(input, size);
-	__HAL_TIM_SET_COUNTER(RmcBoard::can_timeout_timer,0);
+	__HAL_TIM_SET_COUNTER(RmcBoard::can_timeout_timer.get_handler(),0);
 
 	RmcBoard::LED_B.play(RmcLib::LEDPattern::ok);
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-    if (htim == RmcBoard::motor_control_timer){
-    	//通信系
-    	RmcBoard::usb_cdc.tx_interrupt_task();
-    	RmcBoard::send_motor_parameters();
+    if (htim == RmcBoard::motor_control_timer.get_handler()){
+    	RmcBoard::motor_control_timer.interrupt_task();
 
-    	//LED
-    	RmcBoard::LED_R.update();
-    	RmcBoard::LED_G.update();
-    	RmcBoard::LED_B.update();
-    	for(auto &l:RmcBoard::LED){
-    		l.update();
-    	}
+    }else if(htim == RmcBoard::monitor_timer.get_handler()){
+    	RmcBoard::monitor_timer.interrupt_task();
 
-    	//abs enc reading start
-    	RmcBoard::abs_enc_reading_n = 0;
-		//RmcBoard::abs_enc.at(RmcBoard::abs_enc_reading_n).read_start();
-
-		//OK
-    	RmcBoard::LED_G.play(RmcLib::LEDPattern::ok);
-
-    }else if(htim == RmcBoard::monitor_timer){
-    	RmcBoard::monitor_task();
-    	RmcBoard::LED_R.play(RmcLib::LEDPattern::ok);
-
-    }else if(htim == RmcBoard::can_timeout_timer){
-    	if(RmcBoard::timeout_en_flag){
-    		RmcBoard::emergency_stop_sequence();
-    	}else{
-    		RmcBoard::timeout_en_flag = true;
-    	}
-
+    }else if(htim == RmcBoard::can_timeout_timer.get_handler()){
+    	RmcBoard::can_timeout_timer.interrupt_task();
     }
 }
 
 void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c){
-	RmcBoard::abs_enc[RmcBoard::abs_enc_reading_n].i2c_rx_interrupt_task();
+	RmcBoard::motor[RmcBoard::abs_enc_reading_n].abs_enc.i2c_rx_interrupt_task();
 
 	if(RmcBoard::abs_enc_reading_n == RmcBoard::MOTOR_N-1){
 		return;//最後のエンコーダの処理終了
 	}else{
 		RmcBoard::abs_enc_reading_n++;
-		RmcBoard::abs_enc[RmcBoard::abs_enc_reading_n].read_start();
+		RmcBoard::motor[RmcBoard::abs_enc_reading_n].abs_enc.read_start();
 		return;
 	}
 }
 void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c){
 	//エンコーダの値が読めないモーターは停止
-	if(RmcBoard::driver[RmcBoard::abs_enc_reading_n].get_control_mode() == RmcLib::ControlMode::ABS_POSITION_MODE){
-		RmcBoard::driver[RmcBoard::abs_enc_reading_n].set_control_mode(RmcLib::ControlMode::PWM_MODE);
+	if(RmcBoard::motor[RmcBoard::abs_enc_reading_n].driver.get_control_mode() == RmcLib::ControlMode::ABS_POSITION_MODE){
+		RmcBoard::motor[RmcBoard::abs_enc_reading_n].driver.set_control_mode(RmcLib::ControlMode::PWM_MODE);
 	}
 
 	if(RmcBoard::abs_enc_reading_n == RmcBoard::MOTOR_N-1){
 		return;//最後のエンコーダの処理終了
 	}else{
 		RmcBoard::abs_enc_reading_n++;
-		RmcBoard::abs_enc[RmcBoard::abs_enc_reading_n].read_start();
+		RmcBoard::motor[RmcBoard::abs_enc_reading_n].abs_enc.read_start();
 		return;
 	}
 }
@@ -203,12 +180,27 @@ int main(void)
   /* USER CODE BEGIN 2 */
   RmcBoard::init();
 
-  HAL_TIM_Base_Start_IT(RmcBoard::motor_control_timer);
+  HAL_TIM_Base_Start_IT(RmcBoard::motor_control_timer.get_handler());
   //HAL_TIM_Base_Start_IT(RmcBoard::monitor_timer);
   //HAL_TIM_Base_Start_IT(RmcBoard::can_timeout_timer);
-  __HAL_TIM_SET_AUTORELOAD(RmcBoard::monitor_timer, 700);
-  __HAL_TIM_SET_AUTORELOAD(RmcBoard::can_timeout_timer, 2000);
+  __HAL_TIM_SET_AUTORELOAD(RmcBoard::monitor_timer.get_handler(), 700);
+  __HAL_TIM_SET_AUTORELOAD(RmcBoard::can_timeout_timer.get_handler(), 2000);
 
+  CommonLib::DataPacket test;
+  test.board_ID = 0;
+  test.data_type = CommonLib::DataType::RMC_DATA;
+  test.register_ID = (uint16_t)RmcBoard::RmcReg::CONTROL_TYPE;
+  test.data[0] = 2;
+  test.data_length = 1;
+  RmcBoard::execute_rmc_command(0,test , RmcBoard::CommPort::CDC);
+
+  test.board_ID = 0;
+    test.data_type = CommonLib::DataType::RMC_DATA;
+    test.register_ID = (uint16_t)RmcBoard::RmcReg::CONTROL_TYPE | (1<<8);
+    test.data[0] = 2;
+    test.data_length = 1;
+
+    RmcBoard::execute_rmc_command(0,test , RmcBoard::CommPort::CDC);
   /* USER CODE END 2 */
 
   /* Infinite loop */
