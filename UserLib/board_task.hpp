@@ -66,34 +66,33 @@ namespace G24_STM32HAL::RmcBoard{
 
 	//driver
 	inline auto motor = std::array<RmcBoard::MotorUnit,MOTOR_N>{
-		RmcBoard::MotorUnitBuilder()
+		MotorUnitBuilder()
 				.set_LED(RM_LED1_GPIO_Port,RM_LED1_Pin)
 				.set_gear_ratio(36.0f)
 				.set_i2c_encoder(&hi2c3,1000.0f,I2C_SEL1_GPIO_Port,I2C_SEL1_Pin)
-				.set_timeout_timer(&can_timeout_timer)
-				.set_monitor_timer(&monitor_timer)
 				.build(),
-		RmcBoard::MotorUnitBuilder()
+		MotorUnitBuilder()
 				.set_LED(RM_LED2_GPIO_Port,RM_LED2_Pin)
 				.set_gear_ratio(36.0f)
 				.set_i2c_encoder(&hi2c3,1000.0f,I2C_SEL2_GPIO_Port,I2C_SEL2_Pin)
-				.set_timeout_timer(&can_timeout_timer)
-				.set_monitor_timer(&monitor_timer)
 				.build(),
-		RmcBoard::MotorUnitBuilder()
+		MotorUnitBuilder()
 				.set_LED(RM_LED3_GPIO_Port,RM_LED3_Pin)
 				.set_gear_ratio(36.0f)
 				.set_i2c_encoder(&hi2c3,1000,I2C_SEL3_GPIO_Port,I2C_SEL3_Pin)
-				.set_timeout_timer(&can_timeout_timer)
-				.set_monitor_timer(&monitor_timer)
 				.build(),
-		RmcBoard::MotorUnitBuilder()
+		MotorUnitBuilder()
 				.set_LED(RM_LED4_GPIO_Port,RM_LED4_Pin)
 				.set_gear_ratio(36.0f)
 				.set_i2c_encoder(&hi2c3,1000,I2C_SEL4_GPIO_Port,I2C_SEL4_Pin)
-				.set_timeout_timer(&can_timeout_timer)
-				.set_monitor_timer(&monitor_timer)
 				.build(),
+	};
+
+	inline auto id_map = std::array<CommonLib::IDMap,MOTOR_N>{
+		map_build(motor[0],can_timeout_timer,monitor_timer),
+		map_build(motor[1],can_timeout_timer,monitor_timer),
+		map_build(motor[2],can_timeout_timer,monitor_timer),
+		map_build(motor[3],can_timeout_timer,monitor_timer),
 	};
 
 	inline size_t abs_enc_reading_n = 0;

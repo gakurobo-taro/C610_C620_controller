@@ -65,9 +65,7 @@ namespace G24_STM32HAL::RmcBoard{
 			m.driver.set_position_gain({6.0f, 3.0f, 0.0f});
 			m.driver.set_speed_limit(-6.0f,6.0f);
 
-			//m->abs_enc.start();
-
-			//m.test();
+			//m.abs_enc.start();
 		}
 	}
 
@@ -135,6 +133,12 @@ namespace G24_STM32HAL::RmcBoard{
 				||(data_from != CommPort::NO_DATA && rx_data.data_type == CommonLib::DataType::COMMON_DATA_ENFORCE)){
 			execute_common_command(board_id,rx_data,data_from);
 		}
+
+//		for(auto &m:motor){
+//			if(!m.led.is_playing()){
+//				m.led.play(RmcLib::LEDPattern::led_mode.at((uint8_t)m.driver.get_control_mode()));
+//			}
+//		}
 	}
 
 	void execute_rmc_command(size_t board_id,const CommonLib::DataPacket &rx_data,CommPort data_from){
@@ -150,7 +154,7 @@ namespace G24_STM32HAL::RmcBoard{
 
 			auto writer = tx_data.writer();
 
-			if(motor[motor_n].id_map.get(reg_id, writer)){
+			if(id_map[motor_n].get(reg_id, writer)){
 				CommonLib::SerialData tx_serial;
 				CommonLib::CanFrame tx_frame;
 
@@ -178,7 +182,7 @@ namespace G24_STM32HAL::RmcBoard{
 			}
 		}else{
 			auto reader = rx_data.reader();
-			motor[motor_n].id_map.set(reg_id, reader);
+			id_map[motor_n].set(reg_id, reader);
 		}
 	}
 
@@ -229,7 +233,7 @@ namespace G24_STM32HAL::RmcBoard{
 
 	void monitor_task(void){
 		for(size_t motor_n = 0; motor_n < MOTOR_N; motor_n++){
-			for(auto &map_element : motor[motor_n].id_map.accessors_map){
+			for(auto &map_element : id_map[motor_n].accessors_map){
 				if(map_element.first < motor[motor_n].monitor.size()){
 					if(motor[motor_n].monitor.test(map_element.first)){
 						CommonLib::DataPacket tx_packet;

@@ -185,22 +185,6 @@ int main(void)
   //HAL_TIM_Base_Start_IT(RmcBoard::can_timeout_timer);
   __HAL_TIM_SET_AUTORELOAD(RmcBoard::monitor_timer.get_handler(), 700);
   __HAL_TIM_SET_AUTORELOAD(RmcBoard::can_timeout_timer.get_handler(), 2000);
-
-  CommonLib::DataPacket test;
-  test.board_ID = 0;
-  test.data_type = CommonLib::DataType::RMC_DATA;
-  test.register_ID = (uint16_t)RmcBoard::RmcReg::CONTROL_TYPE;
-  test.data[0] = 2;
-  test.data_length = 1;
-  RmcBoard::execute_rmc_command(0,test , RmcBoard::CommPort::CDC);
-
-  test.board_ID = 0;
-    test.data_type = CommonLib::DataType::RMC_DATA;
-    test.register_ID = (uint16_t)RmcBoard::RmcReg::CONTROL_TYPE | (1<<8);
-    test.data[0] = 2;
-    test.data_length = 1;
-
-    RmcBoard::execute_rmc_command(0,test , RmcBoard::CommPort::CDC);
   /* USER CODE END 2 */
 
   /* Infinite loop */
