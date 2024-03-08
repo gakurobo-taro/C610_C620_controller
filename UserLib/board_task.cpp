@@ -47,13 +47,11 @@ namespace G24_STM32HAL::RmcBoard{
 			RmcBoard::LED_R.play(RmcLib::LEDPattern::ok);
 		});
 
-		can_timeout_timer.set_task([](){
-			RmcBoard::emergency_stop_sequence();
-		});
+		can_timeout_timer.set_task(RmcBoard::emergency_stop_sequence);
 
 		can_main.set_filter_mask(16, 0x00200000|(id<<16), 0x00FF0000, CommonLib::FilterMode::STD_AND_EXT, true);
 		can_main.set_filter_mask(17, 0x00000000|(id<<16), 0x00FF0000, CommonLib::FilterMode::STD_AND_EXT, true);
-		can_main.set_filter_mask(18, 0x00F00000, 0x00F00000, CommonLib::FilterMode::STD_AND_EXT, true);
+		can_main.set_filter_mask(18, 0x00F00000,          0x00F00000, CommonLib::FilterMode::STD_AND_EXT, true);
 		can_main.start();
 
 		can_c6x0.start();
@@ -67,7 +65,9 @@ namespace G24_STM32HAL::RmcBoard{
 			m.driver.set_position_gain({6.0f, 3.0f, 0.0f});
 			m.driver.set_speed_limit(-6.0f,6.0f);
 
-			m.abs_enc.start();
+			//m->abs_enc.start();
+
+			//m.test();
 		}
 	}
 

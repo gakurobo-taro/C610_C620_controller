@@ -68,31 +68,28 @@ namespace G24_STM32HAL::RmcBoard{
 	inline auto motor = std::array<RmcBoard::MotorUnit,MOTOR_N>{
 		RmcBoard::MotorUnitBuilder()
 				.set_LED(RM_LED1_GPIO_Port,RM_LED1_Pin)
-				.set_gear_ratio(36.0)
+				.set_gear_ratio(36.0f)
 				.set_i2c_encoder(&hi2c3,1000.0f,I2C_SEL1_GPIO_Port,I2C_SEL1_Pin)
 				.set_timeout_timer(&can_timeout_timer)
 				.set_monitor_timer(&monitor_timer)
 				.build(),
-
 		RmcBoard::MotorUnitBuilder()
 				.set_LED(RM_LED2_GPIO_Port,RM_LED2_Pin)
-				.set_gear_ratio(36.0)
+				.set_gear_ratio(36.0f)
 				.set_i2c_encoder(&hi2c3,1000.0f,I2C_SEL2_GPIO_Port,I2C_SEL2_Pin)
 				.set_timeout_timer(&can_timeout_timer)
 				.set_monitor_timer(&monitor_timer)
 				.build(),
-
 		RmcBoard::MotorUnitBuilder()
 				.set_LED(RM_LED3_GPIO_Port,RM_LED3_Pin)
-				.set_gear_ratio(36.0)
+				.set_gear_ratio(36.0f)
 				.set_i2c_encoder(&hi2c3,1000,I2C_SEL3_GPIO_Port,I2C_SEL3_Pin)
 				.set_timeout_timer(&can_timeout_timer)
 				.set_monitor_timer(&monitor_timer)
 				.build(),
-
 		RmcBoard::MotorUnitBuilder()
 				.set_LED(RM_LED4_GPIO_Port,RM_LED4_Pin)
-				.set_gear_ratio(36.0)
+				.set_gear_ratio(36.0f)
 				.set_i2c_encoder(&hi2c3,1000,I2C_SEL4_GPIO_Port,I2C_SEL4_Pin)
 				.set_timeout_timer(&can_timeout_timer)
 				.set_monitor_timer(&monitor_timer)
@@ -100,7 +97,6 @@ namespace G24_STM32HAL::RmcBoard{
 	};
 
 	inline size_t abs_enc_reading_n = 0;
-
 
 	//functions
 	uint8_t read_board_id(void);
@@ -122,7 +118,6 @@ namespace G24_STM32HAL::RmcBoard{
 
 	void monitor_task(void);
 
-	inline auto control_mode_tmp = std::array<RmcLib::ControlMode,MOTOR_N>{};
 	void emergency_stop_sequence(void);
 	void emergency_stop_release_sequence(void);
 
