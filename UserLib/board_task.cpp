@@ -134,11 +134,11 @@ namespace G24_STM32HAL::RmcBoard{
 			execute_common_command(board_id,rx_data,data_from);
 		}
 
-		for(auto &m:motor){
-			if(!m.led.is_playing()){
-				m.led.play(RmcLib::LEDPattern::led_mode.at((uint8_t)m.driver.get_control_mode()));
-			}
-		}
+//		for(auto &m:motor){
+//			if(!m.led.is_playing()){
+//				m.led.play(RmcLib::LEDPattern::led_mode.at((uint8_t)m.driver.get_control_mode()));
+//			}
+//		}
 	}
 
 	void execute_rmc_command(size_t board_id,const CommonLib::DataPacket &rx_data,CommPort data_from){
