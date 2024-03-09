@@ -62,6 +62,11 @@ namespace G24_STM32HAL::RmcBoard{
 		CAN_SUB,
 		CDC,
 	};
+
+	enum class MotorType:uint8_t{
+		C6x0,
+		VESC,
+	};
 }
 
 

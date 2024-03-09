@@ -58,7 +58,7 @@ namespace G24_STM32HAL::RmcBoard{
 
 	//can
 	inline auto can_main = CommonLib::CanComm<4,4>{&hcan2,CAN_RX_FIFO1,CAN_FILTER_FIFO1,CAN_IT_RX_FIFO1_MSG_PENDING};
-	inline auto can_c6x0 = CommonLib::CanComm<4,4>{&hcan1,CAN_RX_FIFO0,CAN_FILTER_FIFO0,CAN_IT_RX_FIFO0_MSG_PENDING};
+	inline auto can_motor = CommonLib::CanComm<4,4>{&hcan1,CAN_RX_FIFO0,CAN_FILTER_FIFO0,CAN_IT_RX_FIFO0_MSG_PENDING};
 
 	//usb
 	inline auto usb_cdc = CommonLib::UsbCdcComm<4,4>{&hUsbDeviceFS};
@@ -105,7 +105,8 @@ namespace G24_STM32HAL::RmcBoard{
 	void motor_data_process(void);
 
 	//PWM値の送信
-	void send_motor_parameters(void);
+	void send_motor_parameters_to_c6x0(void);
+	void send_motor_parameters_to_vesc(void);
 
 	//メインCANの処理（外部との通信）
 	void main_comm_prossess(void);

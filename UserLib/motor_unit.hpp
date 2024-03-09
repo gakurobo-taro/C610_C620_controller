@@ -29,6 +29,8 @@ namespace G24_STM32HAL::RmcBoard{
 
 		RmcLib::ControlMode mode_tmp;
 
+		MotorType motor_type = MotorType::C6x0;
+
 		MotorUnit(GPIO_TypeDef *led_port,uint16_t led_pin,float gear_ratio,I2C_HandleTypeDef *i2c,float freq,GPIO_TypeDef *i2c_sel_port,uint16_t i2c_sel_pin)
 			:led(led_port,led_pin),
 			 driver(),
@@ -77,6 +79,7 @@ namespace G24_STM32HAL::RmcBoard{
 		auto set_i_gain = [](RmcLib::PIDGain g,float i)mutable->RmcLib::PIDGain {g.ki = i; return g;};
 		auto set_d_gain = [](RmcLib::PIDGain g,float d)mutable->RmcLib::PIDGain {g.kd = d; return g;};
 		return CommonLib::IDMapBuilder()
+				.add((uint16_t)RmcReg::MOTOR_TYPE,    CommonLib::DataAccessor::generate<MotorType>(&unit.motor_type))
 				.add((uint16_t)RmcReg::CONTROL_TYPE,  CommonLib::DataAccessor::generate<RmcLib::ControlMode>([&](RmcLib::ControlMode m)mutable{unit.driver.set_control_mode(m);},[&]()mutable->RmcLib::ControlMode{return unit.driver.get_control_mode();}))
 				.add((uint16_t)RmcReg::GEAR_RATIO,    CommonLib::DataAccessor::generate<float>([&](float ratio)mutable{unit.motor_enc.set_gear_ratio(ratio);},[&]()->float{return unit.motor_enc.get_gear_ratio();}))
 				.add((uint16_t)RmcReg::CAN_TIMEOUT,   CommonLib::DataAccessor::generate<uint16_t>([&](uint16_t period)mutable{timeout_timer.set_and_start(period);},[&]()->uint16_t{return timeout_timer.get_state();}))

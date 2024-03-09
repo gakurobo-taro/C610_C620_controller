@@ -64,27 +64,27 @@ void SystemClock_Config(void);
 void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan){
 	if(hcan == RmcBoard::can_main.get_can_handle()){
 		RmcBoard::can_main.tx_interrupt_task();
-	}else if(hcan == RmcBoard::can_c6x0.get_can_handle()){
-		RmcBoard::can_c6x0.tx_interrupt_task();
+	}else if(hcan == RmcBoard::can_motor.get_can_handle()){
+		RmcBoard::can_motor.tx_interrupt_task();
 	}
 }
 void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef *hcan){
 	if(hcan == RmcBoard::can_main.get_can_handle()){
 		RmcBoard::can_main.tx_interrupt_task();
-	}else if(hcan == RmcBoard::can_c6x0.get_can_handle()){
-		RmcBoard::can_c6x0.tx_interrupt_task();
+	}else if(hcan == RmcBoard::can_motor.get_can_handle()){
+		RmcBoard::can_motor.tx_interrupt_task();
 	}
 }
 void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef *hcan){
 	if(hcan == RmcBoard::can_main.get_can_handle()){
 		RmcBoard::can_main.tx_interrupt_task();
-	}else if(hcan == RmcBoard::can_c6x0.get_can_handle()){
-		RmcBoard::can_c6x0.tx_interrupt_task();
+	}else if(hcan == RmcBoard::can_motor.get_can_handle()){
+		RmcBoard::can_motor.tx_interrupt_task();
 	}
 }
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
-	RmcBoard::can_c6x0.rx_interrupt_task();
+	RmcBoard::can_motor.rx_interrupt_task();
 	RmcBoard::motor_data_process();
 }
 void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan){

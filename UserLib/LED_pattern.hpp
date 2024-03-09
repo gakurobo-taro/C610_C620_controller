@@ -54,6 +54,12 @@ namespace G24_STM32HAL::RmcLib::LEDPattern{
 		abs_position_mode,
 	};
 
+	inline const CommonLib::LEDState vesc_mode[] = {
+		{true,500},
+		{false,500},
+		{false,0},
+	};
+
 	inline const CommonLib::LEDState ok[] = {
 			{true,100},
 			{false,100},

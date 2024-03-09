@@ -24,7 +24,8 @@ namespace G24_STM32HAL::RmcBoard{
 		motor_control_timer.set_task([](){
 			//通信系
 			RmcBoard::usb_cdc.tx_interrupt_task();
-			RmcBoard::send_motor_parameters();
+			RmcBoard::send_motor_parameters_to_c6x0();
+			RmcBoard::send_motor_parameters_to_vesc();
 
 			//LED
 			RmcBoard::LED_R.update();
@@ -54,8 +55,8 @@ namespace G24_STM32HAL::RmcBoard{
 		can_main.set_filter_mask(18, 0x00F00000,          0x00F00000, CommonLib::FilterMode::STD_AND_EXT, true);
 		can_main.start();
 
-		can_c6x0.start();
-		can_c6x0.set_filter_free(0);
+		can_motor.start();
+		can_motor.set_filter_free(0);
 		LED_R.start();
 		LED_G.start();
 		LED_B.start();
@@ -71,9 +72,9 @@ namespace G24_STM32HAL::RmcBoard{
 
 	//受信したモーター情報の処理
 	void motor_data_process(void){
-		if(can_c6x0.rx_available()){
+		if(can_motor.rx_available()){
 			CommonLib::CanFrame rx_frame;
-			can_c6x0.rx(rx_frame);
+			can_motor.rx(rx_frame);
 
 			if(rx_frame.id & 0x200){
 				const size_t id = (rx_frame.id&0xF)-1;
@@ -92,10 +93,10 @@ namespace G24_STM32HAL::RmcBoard{
 	}
 
 	//PWM値の送信
-	void send_motor_parameters(void){
-		CommonLib::CanFrame tx_frame;
-		tx_frame.id = 0x200;
-		auto writer = tx_frame.writer();
+	void send_motor_parameters_to_c6x0(void){
+		CommonLib::CanFrame to_c6x0_frame;
+		to_c6x0_frame.id = 0x200;
+		auto writer = to_c6x0_frame.writer();
 
 		for(auto &m:motor){
 			int16_t duty = (int16_t)(m.driver.get_pwm() * 10000.0f);
@@ -103,7 +104,18 @@ namespace G24_STM32HAL::RmcBoard{
 			writer.write<uint8_t>(duty&0xFF);
 		}
 
-		can_c6x0.tx(tx_frame);
+		can_motor.tx(to_c6x0_frame);
+	}
+	void send_motor_parameters_to_vesc(void){
+		for(size_t i = 0; i < MOTOR_N; i++){
+			if(motor[i].motor_type == MotorType::VESC){
+				CommonLib::CanFrame to_vesc_frame;
+				to_vesc_frame.id = i;
+				to_vesc_frame.is_ext_id = true;
+				to_vesc_frame.writer().write<int32_t>(motor[i].driver.get_pwm()*100000.0f);
+				can_motor.tx(to_vesc_frame);
+			}
+		}
 	}
 
 	//メインCANの処理（外部との通信）
@@ -134,11 +146,11 @@ namespace G24_STM32HAL::RmcBoard{
 			execute_common_command(board_id,rx_data,data_from);
 		}
 
-//		for(auto &m:motor){
-//			if(!m.led.is_playing()){
-//				m.led.play(RmcLib::LEDPattern::led_mode.at((uint8_t)m.driver.get_control_mode()));
-//			}
-//		}
+		for(auto &m:motor){
+			if((m.motor_type == MotorType::VESC) && !m.led.is_playing()){
+				m.led.play(RmcLib::LEDPattern::vesc_mode);
+			}
+		}
 	}
 
 	void execute_rmc_command(size_t board_id,const CommonLib::DataPacket &rx_data,CommPort data_from){
