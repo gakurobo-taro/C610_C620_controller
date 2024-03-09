@@ -10,9 +10,8 @@
 
 
 #include "motor_unit.hpp"
-
-#include "LED_control.hpp"
 #include "LED_pattern.hpp"
+
 #include "STM32HAL_CommonLib/can_comm.hpp"
 #include "STM32HAL_CommonLib/data_packet.hpp"
 #include "STM32HAL_CommonLib/data_convert.hpp"
@@ -48,14 +47,14 @@ namespace G24_STM32HAL::RmcBoard{
 	};
 
 	//timer
-	inline auto motor_control_timer = RmcLib::InterruptionTimerHard(&htim14);
-	inline auto monitor_timer = RmcLib::InterruptionTimerHard(&htim13);
-	inline auto can_timeout_timer = RmcLib::InterruptionTimerHard(&htim12);
+	inline auto motor_control_timer = CommonLib::InterruptionTimerHard(&htim14);
+	inline auto monitor_timer = CommonLib::InterruptionTimerHard(&htim13);
+	inline auto can_timeout_timer = CommonLib::InterruptionTimerHard(&htim12);
 
 	//LEDs
-	inline auto LED_R = RmcLib::LEDPWM{&htim5,TIM_CHANNEL_1};
-	inline auto LED_G = RmcLib::LEDPWM{&htim5,TIM_CHANNEL_2};
-	inline auto LED_B = RmcLib::LEDPWM{&htim5,TIM_CHANNEL_3};
+	inline auto LED_R = CommonLib::LEDPwm{&htim5,TIM_CHANNEL_1};
+	inline auto LED_G = CommonLib::LEDPwm{&htim5,TIM_CHANNEL_2};
+	inline auto LED_B = CommonLib::LEDPwm{&htim5,TIM_CHANNEL_3};
 
 	//can
 	inline auto can_main = CommonLib::CanComm<4,4>{&hcan2,CAN_RX_FIFO1,CAN_FILTER_FIFO1,CAN_IT_RX_FIFO1_MSG_PENDING};

@@ -10,8 +10,9 @@
 
 #include "board_info.hpp"
 #include "motor_control.hpp"
-#include "LED_control.hpp"
-#include "timer_control.hpp"
+
+#include "STM32HAL_CommonLib/timer_control.hpp"
+#include "STM32HAL_CommonLib/LED_control.hpp"
 #include "STM32HAL_CommonLib/data_packet.hpp"
 #include "STM32HAL_CommonLib/id_map_control.hpp"
 
@@ -20,7 +21,7 @@
 namespace G24_STM32HAL::RmcBoard{
 
 	struct MotorUnit{
-		RmcLib::LEDGPIO led;
+		CommonLib::LEDHALGpio led;
 		RmcLib::MotorDriver driver;
 		RmcLib::C6x0State motor_enc;
 		RmcLib::AS5600State abs_enc;
@@ -71,7 +72,7 @@ namespace G24_STM32HAL::RmcBoard{
 		}
 	};
 
-	inline CommonLib::IDMap map_build(MotorUnit &unit,RmcLib::IInterruptionTimer &timeout_timer,RmcLib::IInterruptionTimer &monitor_timer){
+	inline CommonLib::IDMap map_build(MotorUnit &unit,CommonLib::IInterruptionTimer &timeout_timer,CommonLib::IInterruptionTimer &monitor_timer){
 		auto set_p_gain = [](RmcLib::PIDGain g,float p)mutable->RmcLib::PIDGain {g.kp = p; return g;};
 		auto set_i_gain = [](RmcLib::PIDGain g,float i)mutable->RmcLib::PIDGain {g.ki = i; return g;};
 		auto set_d_gain = [](RmcLib::PIDGain g,float d)mutable->RmcLib::PIDGain {g.kd = d; return g;};
