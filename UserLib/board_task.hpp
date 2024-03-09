@@ -87,7 +87,6 @@ namespace G24_STM32HAL::RmcBoard{
 				.set_i2c_encoder(&hi2c3,1000,I2C_SEL4_GPIO_Port,I2C_SEL4_Pin)
 				.build(),
 	};
-
 	inline auto id_map = std::array<CommonLib::IDMap,MOTOR_N>{
 		map_build(motor[0],can_timeout_timer,monitor_timer),
 		map_build(motor[1],can_timeout_timer,monitor_timer),

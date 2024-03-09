@@ -18,9 +18,6 @@
 #include <bitset>
 
 namespace G24_STM32HAL::RmcBoard{
-	inline auto set_p_gain = [](RmcLib::PIDGain g,float p)mutable->RmcLib::PIDGain {g.kp = p; return g;};
-	inline auto set_i_gain = [](RmcLib::PIDGain g,float i)mutable->RmcLib::PIDGain {g.kp = i; return g;};
-	inline auto set_d_gain = [](RmcLib::PIDGain g,float d)mutable->RmcLib::PIDGain {g.kp = d; return g;};
 
 	struct MotorUnit{
 		RmcLib::LEDGPIO led;
@@ -31,9 +28,11 @@ namespace G24_STM32HAL::RmcBoard{
 
 		RmcLib::ControlMode mode_tmp;
 
-		MotorUnit(GPIO_TypeDef *led_port,uint16_t led_pin,float gear_ratio,I2C_HandleTypeDef *i2c,GPIO_TypeDef *i2c_sel_port,uint16_t i2c_sel_pin,float freq)
+		MotorUnit(GPIO_TypeDef *led_port,uint16_t led_pin,float gear_ratio,I2C_HandleTypeDef *i2c,float freq,GPIO_TypeDef *i2c_sel_port,uint16_t i2c_sel_pin)
 			:led(led_port,led_pin),
+			 driver(),
 			 motor_enc(gear_ratio),
+			 monitor(),
 			 abs_enc(i2c,freq,i2c_sel_port,i2c_sel_pin){
 			 }
 	};
@@ -68,12 +67,14 @@ namespace G24_STM32HAL::RmcBoard{
 		}
 
 		MotorUnit build(void){
-			//return MotorUnit(std::move(led),std::move(driver),std::move(motor_enc),std::move(abs_enc),std::move(mreg),timeout_timer,monitor_timer);
-			return std::move(MotorUnit(led_port,led_pin,gear_ratio,i2c,i2c_sel_port,i2c_sel_pin,freq));
+			return std::move(MotorUnit(led_port,led_pin,gear_ratio,i2c,freq,i2c_sel_port,i2c_sel_pin));
 		}
 	};
 
 	inline CommonLib::IDMap map_build(MotorUnit &unit,RmcLib::IInterruptionTimer &timeout_timer,RmcLib::IInterruptionTimer &monitor_timer){
+		auto set_p_gain = [](RmcLib::PIDGain g,float p)mutable->RmcLib::PIDGain {g.kp = p; return g;};
+		auto set_i_gain = [](RmcLib::PIDGain g,float i)mutable->RmcLib::PIDGain {g.ki = i; return g;};
+		auto set_d_gain = [](RmcLib::PIDGain g,float d)mutable->RmcLib::PIDGain {g.kd = d; return g;};
 		return CommonLib::IDMapBuilder()
 				.add((uint16_t)RmcReg::CONTROL_TYPE,  CommonLib::DataAccessor::generate<RmcLib::ControlMode>([&](RmcLib::ControlMode m)mutable{unit.driver.set_control_mode(m);},[&]()mutable->RmcLib::ControlMode{return unit.driver.get_control_mode();}))
 				.add((uint16_t)RmcReg::GEAR_RATIO,    CommonLib::DataAccessor::generate<float>([&](float ratio)mutable{unit.motor_enc.set_gear_ratio(ratio);},[&]()->float{return unit.motor_enc.get_gear_ratio();}))

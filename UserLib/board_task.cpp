@@ -134,11 +134,11 @@ namespace G24_STM32HAL::RmcBoard{
 			execute_common_command(board_id,rx_data,data_from);
 		}
 
-//		for(auto &m:motor){
-//			if(!m.led.is_playing()){
-//				m.led.play(RmcLib::LEDPattern::led_mode.at((uint8_t)m.driver.get_control_mode()));
-//			}
-//		}
+		for(auto &m:motor){
+			if(!m.led.is_playing()){
+				m.led.play(RmcLib::LEDPattern::led_mode.at((uint8_t)m.driver.get_control_mode()));
+			}
+		}
 	}
 
 	void execute_rmc_command(size_t board_id,const CommonLib::DataPacket &rx_data,CommPort data_from){
@@ -234,19 +234,17 @@ namespace G24_STM32HAL::RmcBoard{
 	void monitor_task(void){
 		for(size_t motor_n = 0; motor_n < MOTOR_N; motor_n++){
 			for(auto &map_element : id_map[motor_n].accessors_map){
-				if(map_element.first < motor[motor_n].monitor.size()){
-					if(motor[motor_n].monitor.test(map_element.first)){
-						CommonLib::DataPacket tx_packet;
-						CommonLib::CanFrame tx_frame;
-						tx_packet.register_ID = map_element.first | (motor_n << 8);
-						tx_packet.board_ID = read_board_id();
-						tx_packet.data_type = CommonLib::DataType::RMC_DATA;
+				if((map_element.first < motor[motor_n].monitor.size()) && motor[motor_n].monitor.test(map_element.first)){
+					CommonLib::DataPacket tx_packet;
+					CommonLib::CanFrame tx_frame;
+					tx_packet.register_ID = map_element.first | (motor_n << 8);
+					tx_packet.board_ID = read_board_id();
+					tx_packet.data_type = CommonLib::DataType::RMC_DATA;
 
-						auto writer = tx_packet.writer();
-						if(map_element.second.get(writer)){
-							CommonLib::DataConvert::encode_can_frame(tx_packet, tx_frame);
-							can_main.tx(tx_frame);
-						}
+					auto writer = tx_packet.writer();
+					if(map_element.second.get(writer)){
+						CommonLib::DataConvert::encode_can_frame(tx_packet, tx_frame);
+						can_main.tx(tx_frame);
 					}
 				}
 			}
