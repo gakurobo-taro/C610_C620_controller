@@ -64,70 +64,79 @@ void SystemClock_Config(void);
 void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan){
 	if(hcan == RmcBoard::can_main.get_can_handle()){
 		RmcBoard::can_main.tx_interrupt_task();
-	}else if(hcan == RmcBoard::can_c6x0.get_can_handle()){
-		RmcBoard::can_c6x0.tx_interrupt_task();
+	}else if(hcan == RmcBoard::can_motor.get_can_handle()){
+		RmcBoard::can_motor.tx_interrupt_task();
 	}
 }
 void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef *hcan){
 	if(hcan == RmcBoard::can_main.get_can_handle()){
 		RmcBoard::can_main.tx_interrupt_task();
-	}else if(hcan == RmcBoard::can_c6x0.get_can_handle()){
-		RmcBoard::can_c6x0.tx_interrupt_task();
+	}else if(hcan == RmcBoard::can_motor.get_can_handle()){
+		RmcBoard::can_motor.tx_interrupt_task();
 	}
 }
 void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef *hcan){
 	if(hcan == RmcBoard::can_main.get_can_handle()){
 		RmcBoard::can_main.tx_interrupt_task();
-	}else if(hcan == RmcBoard::can_c6x0.get_can_handle()){
-		RmcBoard::can_c6x0.tx_interrupt_task();
+	}else if(hcan == RmcBoard::can_motor.get_can_handle()){
+		RmcBoard::can_motor.tx_interrupt_task();
 	}
 }
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
-	RmcBoard::can_c6x0.rx_interrupt_task();
+	RmcBoard::can_motor.rx_interrupt_task();
 	RmcBoard::motor_data_process();
 }
 void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan){
 	RmcBoard::can_main.rx_interrupt_task();
-	__HAL_TIM_SET_COUNTER(RmcBoard::can_timeout_timer,0);
+	__HAL_TIM_SET_COUNTER(RmcBoard::can_timeout_timer.get_handler(),0);
 	RmcBoard::LED_B.play(RmcLib::LEDPattern::ok);
 }
 
 void usb_cdc_rx_callback(const uint8_t *input,size_t size){
 	RmcBoard::usb_cdc.rx_interrupt_task(input, size);
-	__HAL_TIM_SET_COUNTER(RmcBoard::can_timeout_timer,0);
+	__HAL_TIM_SET_COUNTER(RmcBoard::can_timeout_timer.get_handler(),0);
 
 	RmcBoard::LED_B.play(RmcLib::LEDPattern::ok);
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-    if (htim == RmcBoard::motor_control_timer){
-    	RmcBoard::usb_cdc.tx_interrupt_task();
-    	RmcBoard::send_motor_parameters();
+    if (htim == RmcBoard::motor_control_timer.get_handler()){
+    	RmcBoard::motor_control_timer.interrupt_task();
 
-    	RmcBoard::LED_R.update();
-    	RmcBoard::LED_G.update();
-    	RmcBoard::LED_B.update();
+    }else if(htim == RmcBoard::monitor_timer.get_handler()){
+    	RmcBoard::monitor_timer.interrupt_task();
 
-    	for(auto &l:RmcBoard::LED){
-    		l.update();
-    	}
-
-    	RmcBoard::LED_G.play(RmcLib::LEDPattern::ok);
-
-    }else if(htim == RmcBoard::monitor_timer){
-    	RmcBoard::monitor_task();
-    	RmcBoard::LED_R.play(RmcLib::LEDPattern::ok);
-
-    }else if(htim == RmcBoard::can_timeout_timer){
-    	if(RmcBoard::timeout_en_flag){
-    		RmcBoard::emergency_stop_sequence();
-    	}else{
-    		RmcBoard::timeout_en_flag = true;
-    	}
-
+    }else if(htim == RmcBoard::can_timeout_timer.get_handler()){
+    	RmcBoard::can_timeout_timer.interrupt_task();
     }
+}
+
+void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c){
+	RmcBoard::motor[RmcBoard::abs_enc_reading_n].abs_enc.i2c_rx_interrupt_task();
+
+	if(RmcBoard::abs_enc_reading_n == RmcBoard::MOTOR_N-1){
+		return;//最後のエンコーダの処理終了
+	}else{
+		RmcBoard::abs_enc_reading_n++;
+		RmcBoard::motor[RmcBoard::abs_enc_reading_n].abs_enc.read_start();
+		return;
+	}
+}
+void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c){
+	//エンコーダの値が読めないモーターは停止
+	if(RmcBoard::motor[RmcBoard::abs_enc_reading_n].driver.get_control_mode() == RmcLib::ControlMode::ABS_POSITION_MODE){
+		RmcBoard::motor[RmcBoard::abs_enc_reading_n].driver.set_control_mode(RmcLib::ControlMode::PWM_MODE);
+	}
+
+	if(RmcBoard::abs_enc_reading_n == RmcBoard::MOTOR_N-1){
+		return;//最後のエンコーダの処理終了
+	}else{
+		RmcBoard::abs_enc_reading_n++;
+		RmcBoard::motor[RmcBoard::abs_enc_reading_n].abs_enc.read_start();
+		return;
+	}
 }
 
 /* USER CODE END 0 */
@@ -171,12 +180,11 @@ int main(void)
   /* USER CODE BEGIN 2 */
   RmcBoard::init();
 
-  HAL_TIM_Base_Start_IT(RmcBoard::motor_control_timer);
+  HAL_TIM_Base_Start_IT(RmcBoard::motor_control_timer.get_handler());
   //HAL_TIM_Base_Start_IT(RmcBoard::monitor_timer);
   //HAL_TIM_Base_Start_IT(RmcBoard::can_timeout_timer);
-  __HAL_TIM_SET_AUTORELOAD(RmcBoard::monitor_timer, 700);
-  __HAL_TIM_SET_AUTORELOAD(RmcBoard::can_timeout_timer, 2000);
-
+  __HAL_TIM_SET_AUTORELOAD(RmcBoard::monitor_timer.get_handler(), 700);
+  __HAL_TIM_SET_AUTORELOAD(RmcBoard::can_timeout_timer.get_handler(), 2000);
   /* USER CODE END 2 */
 
   /* Infinite loop */

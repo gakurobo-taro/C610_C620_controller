@@ -20,8 +20,8 @@ namespace G24_STM32HAL::RmcBoard{
 	enum class CommonReg:uint16_t{
 		NOP,
 		ID_REQEST,
-		EMERGENCY_STOP = 0x0E,
-		RESET_EMERGENCY_STOP = 0x0F,
+		EMERGENCY_STOP = 0xE,
+		RESET_EMERGENCY_STOP = 0xF,
 	};
 
 	enum class RmcReg:uint16_t{
@@ -48,6 +48,9 @@ namespace G24_STM32HAL::RmcBoard{
 		POS_GAIN_P,
 		POS_GAIN_I,
 		POS_GAIN_D,
+		ABS_POS,
+		ABS_SPD,
+		ENC_INV,
 
 		MONITOR_PERIOD = 0xF0,
 		MONITOR_REG,
@@ -58,6 +61,11 @@ namespace G24_STM32HAL::RmcBoard{
 		CAN_MAIN,
 		CAN_SUB,
 		CDC,
+	};
+
+	enum class MotorType:uint8_t{
+		C6x0,
+		VESC,
 	};
 }
 

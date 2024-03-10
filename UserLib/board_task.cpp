@@ -19,26 +19,62 @@ namespace G24_STM32HAL::RmcBoard{
 
 	//各クラス起動処理
 	void init(void){
+		int id = read_board_id();
+
+		motor_control_timer.set_task([](){
+			//通信系
+			RmcBoard::usb_cdc.tx_interrupt_task();
+			RmcBoard::send_motor_parameters_to_c6x0();
+			RmcBoard::send_motor_parameters_to_vesc();
+
+			//LED
+			RmcBoard::LED_R.update();
+			RmcBoard::LED_G.update();
+			RmcBoard::LED_B.update();
+			for(auto &m:RmcBoard::motor){
+				m.led.update();
+			}
+
+			//abs enc reading start
+			RmcBoard::abs_enc_reading_n = 0;
+			//RmcBoard::abs_enc.at(RmcBoard::abs_enc_reading_n).read_start();
+
+			//OK
+			RmcBoard::LED_G.play(RmcLib::LEDPattern::ok);
+		});
+
+		monitor_timer.set_task([](){
+			RmcBoard::monitor_task();
+			RmcBoard::LED_R.play(RmcLib::LEDPattern::ok);
+		});
+
+		can_timeout_timer.set_task(RmcBoard::emergency_stop_sequence);
+
+		can_main.set_filter_mask(16, 0x00200000|(id<<16), 0x00FF0000, CommonLib::FilterMode::STD_AND_EXT, true);
+		can_main.set_filter_mask(17, 0x00000000|(id<<16), 0x00FF0000, CommonLib::FilterMode::STD_AND_EXT, true);
+		can_main.set_filter_mask(18, 0x00F00000,          0x00F00000, CommonLib::FilterMode::STD_AND_EXT, true);
 		can_main.start();
-		can_main.set_filter_free(16);
-		can_c6x0.start();
-		can_c6x0.set_filter_free(0);
+
+		can_motor.start();
+		can_motor.set_filter_free(0);
 		LED_R.start();
 		LED_G.start();
 		LED_B.start();
 
-		for(auto &d:driver){
-			d.set_speed_gain({0.5f, 0.2f, 0.0f});
-			d.set_position_gain({1.0f, 0.5f, 0.0f});
-			d.set_speed_limit(-1.0f,1.0f);
+		for(auto &m:motor){
+			m.driver.set_speed_gain({0.5f, 0.2f, 0.0f});
+			m.driver.set_position_gain({6.0f, 3.0f, 0.0f});
+			m.driver.set_speed_limit(-6.0f,6.0f);
+
+			//m.abs_enc.start();
 		}
 	}
 
 	//受信したモーター情報の処理
 	void motor_data_process(void){
-		if(can_c6x0.rx_available()){
+		if(can_motor.rx_available()){
 			CommonLib::CanFrame rx_frame;
-			can_c6x0.rx(rx_frame);
+			can_motor.rx(rx_frame);
 
 			if(rx_frame.id & 0x200){
 				const size_t id = (rx_frame.id&0xF)-1;
@@ -46,29 +82,40 @@ namespace G24_STM32HAL::RmcBoard{
 					return;
 				}
 
-				motor_state[id].update(rx_frame);
-				driver[id].update_operation_val(motor_state[id]);
+				motor[id].motor_enc.update(rx_frame);
+				motor[id].driver.update_operation_val(motor[id].motor_enc,motor[id].abs_enc);
 
-				if(!LED[id].is_playing()){
-					LED[id].play(RmcLib::LEDPattern::led_mode.at((uint8_t)driver[id].get_control_mode()));
+				if(!motor[id].led.is_playing()){
+					motor[id].led.play(RmcLib::LEDPattern::led_mode.at((uint8_t)motor[id].driver.get_control_mode()));
 				}
 			}
 		}
 	}
 
 	//PWM値の送信
-	void send_motor_parameters(void){
-		CommonLib::CanFrame tx_frame;
-		tx_frame.id = 0x200;
-		auto writer = tx_frame.writer();
+	void send_motor_parameters_to_c6x0(void){
+		CommonLib::CanFrame to_c6x0_frame;
+		to_c6x0_frame.id = 0x200;
+		auto writer = to_c6x0_frame.writer();
 
-		for(int i = 0; i < 4; i++){
-			int16_t duty = (int16_t)(driver.at(i).get_pwm() * 10000.0f);
+		for(auto &m:motor){
+			int16_t duty = (int16_t)(m.driver.get_pwm() * 10000.0f);
 			writer.write<uint8_t>(duty>>8);
 			writer.write<uint8_t>(duty&0xFF);
 		}
 
-		can_c6x0.tx(tx_frame);
+		can_motor.tx(to_c6x0_frame);
+	}
+	void send_motor_parameters_to_vesc(void){
+		for(size_t i = 0; i < MOTOR_N; i++){
+			if(motor[i].motor_type == MotorType::VESC){
+				CommonLib::CanFrame to_vesc_frame;
+				to_vesc_frame.id = i;
+				to_vesc_frame.is_ext_id = true;
+				to_vesc_frame.writer().write<int32_t>(motor[i].driver.get_pwm()*100000.0f);
+				can_motor.tx(to_vesc_frame);
+			}
+		}
 	}
 
 	//メインCANの処理（外部との通信）
@@ -98,6 +145,12 @@ namespace G24_STM32HAL::RmcBoard{
 				||(data_from != CommPort::NO_DATA && rx_data.data_type == CommonLib::DataType::COMMON_DATA_ENFORCE)){
 			execute_common_command(board_id,rx_data,data_from);
 		}
+
+		for(auto &m:motor){
+			if((m.motor_type == MotorType::VESC) && !m.led.is_playing()){
+				m.led.play(RmcLib::LEDPattern::vesc_mode);
+			}
+		}
 	}
 
 	void execute_rmc_command(size_t board_id,const CommonLib::DataPacket &rx_data,CommPort data_from){
@@ -110,6 +163,7 @@ namespace G24_STM32HAL::RmcBoard{
 
 		if(rx_data.is_request){
 			CommonLib::DataPacket tx_data;
+
 			auto writer = tx_data.writer();
 
 			if(id_map[motor_n].get(reg_id, writer)){
@@ -182,7 +236,7 @@ namespace G24_STM32HAL::RmcBoard{
 			emergency_stop_sequence();
 			break;
 		case CommonReg::RESET_EMERGENCY_STOP:
-			//nop
+			emergency_stop_release_sequence();
 			break;
 		default:
 			break;
@@ -192,19 +246,17 @@ namespace G24_STM32HAL::RmcBoard{
 	void monitor_task(void){
 		for(size_t motor_n = 0; motor_n < MOTOR_N; motor_n++){
 			for(auto &map_element : id_map[motor_n].accessors_map){
-				if(map_element.first < monitor[motor_n].size()){
-					if(monitor[motor_n].test(map_element.first)){
-						CommonLib::DataPacket tx_packet;
-						CommonLib::CanFrame tx_frame;
-						tx_packet.register_ID = map_element.first | (motor_n << 8);
-						tx_packet.board_ID = read_board_id();
-						tx_packet.data_type = CommonLib::DataType::RMC_DATA;
+				if((map_element.first < motor[motor_n].monitor.size()) && motor[motor_n].monitor.test(map_element.first)){
+					CommonLib::DataPacket tx_packet;
+					CommonLib::CanFrame tx_frame;
+					tx_packet.register_ID = map_element.first | (motor_n << 8);
+					tx_packet.board_ID = read_board_id();
+					tx_packet.data_type = CommonLib::DataType::RMC_DATA;
 
-						auto writer = tx_packet.writer();
-						if(map_element.second.get(writer)){
-							CommonLib::DataConvert::encode_can_frame(tx_packet, tx_frame);
-							can_main.tx(tx_frame);
-						}
+					auto writer = tx_packet.writer();
+					if(map_element.second.get(writer)){
+						CommonLib::DataConvert::encode_can_frame(tx_packet, tx_frame);
+						can_main.tx(tx_frame);
 					}
 				}
 			}
@@ -212,33 +264,41 @@ namespace G24_STM32HAL::RmcBoard{
 	}
 
 	void emergency_stop_sequence(void){
-		for(auto &d:RmcBoard::driver){
-			d.set_control_mode(RmcLib::ControlMode::PWM_MODE);
+		for(auto &m:motor){
+			m.mode_tmp = m.driver.get_control_mode();
+			m.driver.set_control_mode(RmcLib::ControlMode::PWM_MODE);
 		}
 		RmcBoard::LED_R.play(RmcLib::LEDPattern::error);
+	}
+	void emergency_stop_release_sequence(void){
+		for(auto &m:motor){
+			m.driver.set_control_mode(m.mode_tmp);
+		}
 	}
 
 
 #ifdef MOTOR_DEBUG
 	void motor_test(void){
-		for(auto &d:driver){
-//			d.set_control_mode(RmcLib::ControlMode::POSITION_MODE);
-//			d.set_target_position(-0.3f);
-//			d.set_speed_limit(-0.2,0.2);
-
-			d.set_control_mode(RmcLib::ControlMode::PWM_MODE);
-			d.set_pwm(0.05);
-		}
-		HAL_Delay(2000);
-
-		for(auto &d:driver){
-//			d.set_control_mode(RmcLib::ControlMode::POSITION_MODE);
-//			d.set_target_position(0.3f);
-//			d.set_speed_limit(-0.1,0.1);
-
-			d.set_control_mode(RmcLib::ControlMode::PWM_MODE);
-			d.set_pwm(-0.05);
-		}
+//		for(auto &m:motor){
+//			m.driver.set_control_mode(RmcLib::ControlMode::POSITION_MODE);
+//			m.driver.set_target_position(-3.14f);
+//			m.driver.set_speed_limit(-5,5);
+//
+////			m.driver.set_control_mode(RmcLib::ControlMode::PWM_MODE);
+////			m.driver.set_pwm(0.05);
+//		}
+//		HAL_Delay(2000);
+//
+//		for(auto &m:motor){
+//			m.driver.set_control_mode(RmcLib::ControlMode::POSITION_MODE);
+//			m.driver.set_target_position(3.14f);
+//			m.driver.set_speed_limit(-10,10);
+//
+////			m.driver.set_control_mode(RmcLib::ControlMode::PWM_MODE);
+////			m.driver.set_pwm(-0.05);
+//		}
+		motor[0].driver.set_control_mode(RmcLib::ControlMode::PWM_MODE);
+		motor[1].driver.set_control_mode(RmcLib::ControlMode::POSITION_MODE);
 		HAL_Delay(2000);
 	}
 #endif
