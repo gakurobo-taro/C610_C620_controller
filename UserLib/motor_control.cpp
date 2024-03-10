@@ -23,12 +23,12 @@ void MotorDriver::set_control_mode(ControlMode _mode){
 		target_speed = 0.0f;
 		break;
 	case ControlMode::POSITION_MODE:
-		target_rad = get_current_position();
+		target_rad = state.rad;//get_current_position();
 		target_speed = 0.0f;
 		pwm = 0;
 		break;
 	case ControlMode::ABS_POSITION_MODE:
-		target_rad = get_abs_position();
+		target_rad = abs_state.rad;
 		target_speed = 0.0f;
 		pwm = 0;
 		break;
