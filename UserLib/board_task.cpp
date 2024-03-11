@@ -23,29 +23,29 @@ namespace G24_STM32HAL::RmcBoard{
 
 		motor_control_timer.set_task([](){
 			//通信系
-			RmcBoard::usb_cdc.tx_interrupt_task();
-			RmcBoard::send_motor_parameters_to_c6x0();
-			RmcBoard::send_motor_parameters_to_vesc();
+			usb_cdc.tx_interrupt_task();
+			send_motor_parameters_to_c6x0();
+			send_motor_parameters_to_vesc();
 
 			//LED
-			RmcBoard::LED_R.update();
-			RmcBoard::LED_G.update();
-			RmcBoard::LED_B.update();
-			for(auto &m:RmcBoard::motor){
+			LED_R.update();
+			LED_G.update();
+			LED_B.update();
+			for(auto &m:motor){
 				m.led.update();
 			}
 
 			//abs enc reading start
-			RmcBoard::abs_enc_reading_n = 0;
-			//RmcBoard::abs_enc.at(RmcBoard::abs_enc_reading_n).read_start();
+			abs_enc_reading_itr = motor.begin();
+			abs_enc_reading_itr->abs_enc.read_start();
 
 			//OK
-			RmcBoard::LED_G.play(RmcLib::LEDPattern::ok);
+			LED_G.play(RmcLib::LEDPattern::ok);
 		});
 
 		monitor_timer.set_task([](){
-			RmcBoard::monitor_task();
-			RmcBoard::LED_R.play(RmcLib::LEDPattern::ok);
+			monitor_task();
+			LED_R.play(RmcLib::LEDPattern::ok);
 		});
 
 		can_timeout_timer.set_task(RmcBoard::emergency_stop_sequence);

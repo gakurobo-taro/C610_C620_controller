@@ -93,7 +93,7 @@ namespace G24_STM32HAL::RmcBoard{
 		map_build(motor[3],can_timeout_timer,monitor_timer),
 	};
 
-	inline size_t abs_enc_reading_n = 0;
+	inline auto abs_enc_reading_itr = motor.begin();
 
 	//functions
 	uint8_t read_board_id(void);
