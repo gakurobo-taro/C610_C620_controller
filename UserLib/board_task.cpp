@@ -112,7 +112,14 @@ namespace G24_STM32HAL::RmcBoard{
 				CommonLib::CanFrame to_vesc_frame;
 				to_vesc_frame.id = i;
 				to_vesc_frame.is_ext_id = true;
-				to_vesc_frame.writer().write<int32_t>(motor[i].driver.get_pwm()*100000.0f);
+				to_vesc_frame.is_remote = false;
+
+				int32_t duty = (int32_t)(motor[i].driver.get_pwm()*100000.0f);
+				to_vesc_frame.data[0] = (duty >> 24)&0xFF;
+				to_vesc_frame.data[1] = (duty >> 16)&0xFF;
+				to_vesc_frame.data[2] = (duty >>  8)&0xFF;
+				to_vesc_frame.data[3] = (duty      )&0xFF;
+				to_vesc_frame.data_length  = 4;
 				can_motor.tx(to_vesc_frame);
 			}
 		}
