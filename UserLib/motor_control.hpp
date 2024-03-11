@@ -124,12 +124,12 @@ namespace G24_STM32HAL::RmcLib{
 	public:
 		//mode setting
 		void set_control_mode(ControlMode _mode);
-		ControlMode get_control_mode(void){ return mode; }
+		ControlMode get_control_mode(void)const{ return mode; }
 		void set_origin(float origin_rad){origin = origin_rad;}
 
 		//pwm control
 		void set_pwm(float _pwm){ pwm = std::clamp(_pwm,-1.0f,1.0f); }
-		float get_pwm(void){ return pwm; }
+		float get_pwm(void)const{ return pwm; }
 
 		//speed control
 		void set_speed_gain(const PIDGain &gain){speed_pid.set_gain(gain);}
@@ -152,8 +152,8 @@ namespace G24_STM32HAL::RmcLib{
 		PIDGain get_position_gain(void)const{return position_pid.get_gain();}
 
 		//abs position
-		float get_abs_position(void){return abs_state.rad;};
-		float get_abs_speed(void){return abs_state.speed;};
+		float get_abs_position(void)const{return abs_state.rad;};
+		float get_abs_speed(void)const{return abs_state.speed;};
 
 		//pid operation
 		float update_operation_val(const MotorState &_state,const MotorState &_abs_state);
