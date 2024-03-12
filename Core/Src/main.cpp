@@ -114,28 +114,28 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 }
 
 void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c){
-	RmcBoard::abs_enc_reading_itr->abs_enc.i2c_rx_interrupt_task();
+	RmcBoard::abs_enc_reading_iter->abs_enc.i2c_rx_interrupt_task();
 
-	RmcBoard::abs_enc_reading_itr ++;
+	RmcBoard::abs_enc_reading_iter ++;
 
-	if(RmcBoard::abs_enc_reading_itr == RmcBoard::motor.end()){
+	if(RmcBoard::abs_enc_reading_iter == RmcBoard::motor.end()){
 		return;//最後のエンコーダの処理終了
 	}else{
-		RmcBoard::abs_enc_reading_itr->abs_enc.read_start();
+		RmcBoard::abs_enc_reading_iter->abs_enc.read_start();
 	}
 }
 void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c){
 	//エンコーダの値が読めないモーターは停止
-	if(RmcBoard::abs_enc_reading_itr->driver.get_control_mode() == RmcLib::ControlMode::ABS_POSITION_MODE){
-		RmcBoard::abs_enc_reading_itr->driver.set_control_mode(RmcLib::ControlMode::PWM_MODE);
+	if(RmcBoard::abs_enc_reading_iter->driver.get_control_mode() == RmcLib::ControlMode::ABS_POSITION_MODE){
+		RmcBoard::abs_enc_reading_iter->driver.set_control_mode(RmcLib::ControlMode::PWM_MODE);
 	}
 
-	RmcBoard::abs_enc_reading_itr ++;
+	RmcBoard::abs_enc_reading_iter ++;
 
-	if(RmcBoard::abs_enc_reading_itr == RmcBoard::motor.end()){
+	if(RmcBoard::abs_enc_reading_iter == RmcBoard::motor.end()){
 		return;//最後のエンコーダの処理終了
 	}else{
-		RmcBoard::abs_enc_reading_itr->abs_enc.read_start();
+		RmcBoard::abs_enc_reading_iter->abs_enc.read_start();
 	}
 }
 

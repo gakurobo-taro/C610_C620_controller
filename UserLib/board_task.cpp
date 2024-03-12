@@ -1,4 +1,4 @@
-/*
+ /*
  * board_task.cpp
  *
  *  Created on: Jan 6, 2024
@@ -36,8 +36,8 @@ namespace G24_STM32HAL::RmcBoard{
 			}
 
 			//abs enc reading start
-			abs_enc_reading_itr = motor.begin();
-			abs_enc_reading_itr->abs_enc.read_start();
+			abs_enc_reading_iter = motor.begin();
+			abs_enc_reading_iter->abs_enc.read_start();
 
 			//OK
 			LED_G.play(RmcLib::LEDPattern::ok);
