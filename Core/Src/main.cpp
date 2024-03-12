@@ -89,13 +89,14 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 }
 void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan){
 	RmcBoard::can_main.rx_interrupt_task();
-	__HAL_TIM_SET_COUNTER(RmcBoard::can_timeout_timer.get_handler(),0);
+	RmcBoard::can_timeout_timer.reset_count();
+
 	RmcBoard::LED_B.play(RmcLib::LEDPattern::ok);
 }
 
 void usb_cdc_rx_callback(const uint8_t *input,size_t size){
 	RmcBoard::usb_cdc.rx_interrupt_task(input, size);
-	__HAL_TIM_SET_COUNTER(RmcBoard::can_timeout_timer.get_handler(),0);
+	RmcBoard::can_timeout_timer.reset_count();
 
 	RmcBoard::LED_B.play(RmcLib::LEDPattern::ok);
 }
