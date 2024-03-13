@@ -197,6 +197,11 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	  RmcBoard::main_comm_prossess();
 	  //RmcBoard::motor_test();
+
+//	  CommonLib::SerialData test;
+//	  test.size = sprintf((char*)test.data,"%3.4f\r\n",RmcBoard::motor[0].abs_enc.rad);
+//	  RmcBoard::usb_cdc.tx(test);
+//	  HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }

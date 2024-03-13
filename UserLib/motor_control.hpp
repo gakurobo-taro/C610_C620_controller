@@ -30,7 +30,7 @@ namespace G24_STM32HAL::RmcLib{
 	};
 
 	//ロボマス内臓エンコーダ
-	struct C6x0State:MotorState{
+	struct C6x0State:public MotorState{
 	private:
 		float gear_ratio;
 		float gear_ratio_inv;
@@ -67,7 +67,7 @@ namespace G24_STM32HAL::RmcLib{
 	};
 
 	//AS5600による制御
-	struct AS5600State:MotorState{
+	struct AS5600State:public MotorState{
 	private:
 		static constexpr uint16_t as5600_id = 0x36;
 		static constexpr size_t as5600_resolution = 12;
@@ -79,7 +79,7 @@ namespace G24_STM32HAL::RmcLib{
 		AngleEncoder encoder;
 		const float freq;
 
-		uint16_t enc_val = 0;
+
 		float rad_old = 0;
 
 		float inv = 1.0f;
@@ -87,6 +87,8 @@ namespace G24_STM32HAL::RmcLib{
 		AS5600State(I2C_HandleTypeDef* _i2c,float _freq,GPIO_TypeDef *_port,uint16_t _pin)
 		:i2c(_i2c),encoder(as5600_resolution),freq(_freq),port(_port),pin(_pin){
 		}
+
+		volatile uint8_t enc_val[2] = {0};
 
 		void start(void){
 			HAL_GPIO_WritePin(port,pin,GPIO_PIN_SET);
@@ -97,11 +99,12 @@ namespace G24_STM32HAL::RmcLib{
 
 		void read_start(void){
 			HAL_GPIO_WritePin(port,pin,GPIO_PIN_SET);
-			HAL_I2C_Master_Receive_IT(i2c, as5600_id<<1, (uint8_t*)&enc_val, 2);
+			HAL_I2C_Master_Receive_IT(i2c, as5600_id<<1, const_cast<uint8_t*>(enc_val), 2);
 		}
 		void i2c_rx_interrupt_task(void){
+			uint16_t angle = enc_val[0]<<8 | enc_val[1];
 			HAL_GPIO_WritePin(port,pin,GPIO_PIN_RESET);
-			rad = encoder.update_angle(enc_val)*inv;
+			rad = encoder.update_angle(angle)*inv;
 			speed = (rad - rad_old)*freq*inv;
 			rad_old = rad;
 		}
