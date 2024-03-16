@@ -10,7 +10,6 @@
 namespace G24_STM32HAL::RmcLib{
 
 void MotorDriver::set_control_mode(ControlMode _mode){
-
 	switch(_mode){
 	case ControlMode::PWM_MODE:
 		pwm = 0.0f;
@@ -23,7 +22,7 @@ void MotorDriver::set_control_mode(ControlMode _mode){
 		target_speed = 0.0f;
 		break;
 	case ControlMode::POSITION_MODE:
-		target_rad = state.rad;//get_current_position();
+		target_rad = state.rad;
 		target_speed = 0.0f;
 		pwm = 0;
 		break;

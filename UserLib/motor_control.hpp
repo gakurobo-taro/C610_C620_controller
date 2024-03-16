@@ -9,6 +9,7 @@
 #define MOTOR_CONTROL_HPP_
 
 #include <algorithm>
+#include <numeric>
 #include <cmath>
 #include "main.h"
 #include "pid.hpp"
@@ -35,13 +36,17 @@ namespace G24_STM32HAL::RmcLib{
 		float gear_ratio;
 		float gear_ratio_inv;
 		float ks;
+		float old_rad;
+
 		AngleEncoder encoder;
 	public:
 		float current;
 		float temperature;
 		C6x0State(float _gear_ratio = 1):
-			gear_ratio(_gear_ratio),gear_ratio_inv(1/_gear_ratio),
-			ks(2*M_PI/(gear_ratio*60.0f)),encoder(13){}
+			gear_ratio(_gear_ratio),
+			gear_ratio_inv(1/_gear_ratio),
+			ks(2*M_PI*1000.0f/((float)(2<<13)*gear_ratio)),
+			encoder(13){}
 
 		bool update(const CommonLib::CanFrame &frame){
 			if(frame.is_ext_id || frame.is_remote || frame.data_length != 8 || !(0x200&frame.id)){
@@ -51,9 +56,11 @@ namespace G24_STM32HAL::RmcLib{
 			int16_t angle_speed = frame.data[2]<<8 | frame.data[3];
 
 			rad = encoder.update_angle(angle,angle_speed)*gear_ratio_inv;
-			speed = (float)angle_speed * ks;
+			speed = (float)(rad - old_rad)*ks;
 			current = (float)(frame.data[4]<<8 | frame.data[5]);
 			temperature = (float)frame.data[6];
+
+			old_rad = rad;
 			return true;
 		}
 		void set_gear_ratio(float ratio){
@@ -71,24 +78,28 @@ namespace G24_STM32HAL::RmcLib{
 	private:
 		static constexpr uint16_t as5600_id = 0x36;
 		static constexpr size_t as5600_resolution = 12;
-		static constexpr float ks = 2*M_PI/(float)((1<<as5600_resolution)-1);
 
 		GPIO_TypeDef *port;
 		const uint16_t pin;
 		I2C_HandleTypeDef* i2c;
 		AngleEncoder encoder;
-		const float freq;
 
+		volatile uint8_t enc_val[2] = {0};
 
-		float rad_old = 0;
+		const float ks;
+		float angle_buff[8] = {0};
+		size_t head = 0;
+		float rad_sum_old= 0;
 
 		float inv = 1.0f;
 	public:
 		AS5600State(I2C_HandleTypeDef* _i2c,float _freq,GPIO_TypeDef *_port,uint16_t _pin)
-		:i2c(_i2c),encoder(as5600_resolution),freq(_freq),port(_port),pin(_pin){
+			:i2c(_i2c),
+			 encoder(as5600_resolution),
+			 ks(_freq/(sizeof(angle_buff)/sizeof(float))),
+			 port(_port),
+			 pin(_pin){
 		}
-
-		volatile uint8_t enc_val[2] = {0};
 
 		void start(void){
 			HAL_GPIO_WritePin(port,pin,GPIO_PIN_SET);
@@ -96,7 +107,6 @@ namespace G24_STM32HAL::RmcLib{
 			HAL_I2C_Master_Transmit(i2c, as5600_id<<1, &reg, 1,100);
 			HAL_GPIO_WritePin(port,pin,GPIO_PIN_RESET);
 		}
-
 		void read_start(void){
 			HAL_GPIO_WritePin(port,pin,GPIO_PIN_SET);
 			HAL_I2C_Master_Receive_IT(i2c, as5600_id<<1, const_cast<uint8_t*>(enc_val), 2);
@@ -105,8 +115,12 @@ namespace G24_STM32HAL::RmcLib{
 			uint16_t angle = enc_val[0]<<8 | enc_val[1];
 			HAL_GPIO_WritePin(port,pin,GPIO_PIN_RESET);
 			rad = encoder.update_angle(angle)*inv;
-			speed = (rad - rad_old)*freq*inv;
-			rad_old = rad;
+
+			angle_buff[head] = rad;
+			head = (head+1)&7;
+			float rad_sum = std::reduce(std::begin(angle_buff), std::end(angle_buff));
+			speed = (rad_sum - rad_sum_old)*ks;
+			rad_sum_old = rad_sum;
 		}
 		void set_enc_inv(bool _inv){inv = _inv?-1.0f:1.0f;}
 		bool is_inv(void)const{return inv<0.0f?true:false;}

@@ -128,6 +128,7 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c){
 void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c){
 	//エンコーダの値が読めないモーターは停止
 	if(RmcBoard::abs_enc_reading_iter->driver.get_control_mode() == RmcLib::ControlMode::ABS_POSITION_MODE){
+		RmcBoard::LED_R.play(RmcLib::LEDPattern::error);
 		RmcBoard::abs_enc_reading_iter->driver.set_control_mode(RmcLib::ControlMode::PWM_MODE);
 	}
 
@@ -199,9 +200,9 @@ int main(void)
 	  //RmcBoard::motor_test();
 
 //	  CommonLib::SerialData test;
-//	  test.size = sprintf((char*)test.data,"%3.4f\r\n",RmcBoard::motor[0].abs_enc.rad);
+//	  test.size = sprintf((char*)test.data,"%3.4f,%f\r\n",RmcBoard::motor[1].abs_enc.rad,RmcBoard::motor[1].abs_enc.speed);
 //	  RmcBoard::usb_cdc.tx(test);
-//	  HAL_Delay(100);
+//	  HAL_Delay(1);
   }
   /* USER CODE END 3 */
 }

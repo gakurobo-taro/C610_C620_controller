@@ -10,6 +10,18 @@
 namespace G24_STM32HAL::RmcBoard{
 
 	uint8_t read_board_id(void){
+		struct GPIOParam{
+			GPIO_TypeDef * port;
+			uint16_t pin;
+			GPIOParam(GPIO_TypeDef * _port,uint16_t _pin):port(_port),pin(_pin){}
+		};
+		auto dip_sw = std::array<GPIOParam,4>{
+			GPIOParam{ID0_GPIO_Port,ID0_Pin},
+			GPIOParam{ID1_GPIO_Port,ID1_Pin},
+			GPIOParam{ID2_GPIO_Port,ID2_Pin},
+			GPIOParam{ID3_GPIO_Port,ID3_Pin},
+		};
+
 		uint8_t id = 0;
 		for(int i = 0; i<4; i++){
 			id |= !(uint8_t)HAL_GPIO_ReadPin(dip_sw.at(i).port,dip_sw.at(i).pin) << i;
@@ -19,7 +31,7 @@ namespace G24_STM32HAL::RmcBoard{
 
 	//各クラス起動処理
 	void init(void){
-		int id = read_board_id();
+		board_id = read_board_id();
 
 		motor_control_timer.set_task([](){
 			//通信系
@@ -50,8 +62,8 @@ namespace G24_STM32HAL::RmcBoard{
 
 		can_timeout_timer.set_task(RmcBoard::emergency_stop_sequence);
 
-		can_main.set_filter_mask(16, 0x00200000|(id<<16), 0x00FF0000, CommonLib::FilterMode::STD_AND_EXT, true);
-		can_main.set_filter_mask(17, 0x00000000|(id<<16), 0x00FF0000, CommonLib::FilterMode::STD_AND_EXT, true);
+		can_main.set_filter_mask(16, 0x00200000|(board_id<<16), 0x00FF0000, CommonLib::FilterMode::STD_AND_EXT, true);
+		can_main.set_filter_mask(17, 0x00000000|(board_id<<16), 0x00FF0000, CommonLib::FilterMode::STD_AND_EXT, true);
 		can_main.set_filter_mask(18, 0x00F00000,          0x00F00000, CommonLib::FilterMode::STD_AND_EXT, true);
 		can_main.start();
 
@@ -84,7 +96,6 @@ namespace G24_STM32HAL::RmcBoard{
 				}
 
 				motor[id].motor_enc.update(rx_frame);
-				motor[id].driver.update_operation_val(motor[id].motor_enc,motor[id].abs_enc);
 
 				if(!motor[id].led.is_playing()){
 					motor[id].led.play(RmcLib::LEDPattern::led_mode.at((uint8_t)motor[id].driver.get_control_mode()));
@@ -100,6 +111,7 @@ namespace G24_STM32HAL::RmcBoard{
 		auto writer = to_c6x0_frame.writer();
 
 		for(auto &m:motor){
+			m.driver.update_operation_val(m.motor_enc, m.abs_enc);
 			int16_t duty = (int16_t)(m.driver.get_pwm() * 10000.0f);
 			writer.write<uint8_t>(duty>>8);
 			writer.write<uint8_t>(duty&0xFF);
@@ -128,8 +140,6 @@ namespace G24_STM32HAL::RmcBoard{
 
 	//メインCANの処理（外部との通信）
 	void main_comm_prossess(void){
-
-		const int board_id = read_board_id();
 		CommonLib::DataPacket rx_data;
 		CommPort data_from = CommPort::NO_DATA;
 
@@ -258,7 +268,7 @@ namespace G24_STM32HAL::RmcBoard{
 					CommonLib::DataPacket tx_packet;
 					CommonLib::CanFrame tx_frame;
 					tx_packet.register_ID = map_element.first | (motor_n << 8);
-					tx_packet.board_ID = read_board_id();
+					tx_packet.board_ID = board_id;
 					tx_packet.data_type = CommonLib::DataType::RMC_DATA;
 
 					auto writer = tx_packet.writer();

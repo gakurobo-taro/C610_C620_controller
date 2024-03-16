@@ -27,16 +27,16 @@ namespace G24_STM32HAL::RmcBoard{
 		RmcLib::AS5600State abs_enc;
 		std::bitset<0x35+1> monitor;
 
-		RmcLib::ControlMode mode_tmp;
+		RmcLib::ControlMode mode_tmp = RmcLib::ControlMode::PWM_MODE;
 
 		MotorType motor_type = MotorType::C6x0;
 
 		MotorUnit(GPIO_TypeDef *led_port,uint16_t led_pin,float gear_ratio,I2C_HandleTypeDef *i2c,float freq,GPIO_TypeDef *i2c_sel_port,uint16_t i2c_sel_pin)
 			:led(led_port,led_pin),
-			 driver(),
 			 motor_enc(gear_ratio),
 			 monitor(),
-			 abs_enc(i2c,freq,i2c_sel_port,i2c_sel_pin){
+			 abs_enc(i2c,freq,i2c_sel_port,i2c_sel_pin),
+			 driver(){
 			 }
 	};
 	class MotorUnitBuilder{
