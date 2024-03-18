@@ -181,12 +181,6 @@ int main(void)
   MX_TIM12_Init();
   /* USER CODE BEGIN 2 */
   RmcBoard::init();
-
-  HAL_TIM_Base_Start_IT(RmcBoard::motor_control_timer.get_handler());
-  //HAL_TIM_Base_Start_IT(RmcBoard::monitor_timer);
-  //HAL_TIM_Base_Start_IT(RmcBoard::can_timeout_timer);
-  __HAL_TIM_SET_AUTORELOAD(RmcBoard::monitor_timer.get_handler(), 700);
-  __HAL_TIM_SET_AUTORELOAD(RmcBoard::can_timeout_timer.get_handler(), 2000);
   /* USER CODE END 2 */
 
   /* Infinite loop */

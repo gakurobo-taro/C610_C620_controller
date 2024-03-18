@@ -45,7 +45,7 @@ namespace G24_STM32HAL::RmcLib{
 		C6x0State(float _gear_ratio = 1):
 			gear_ratio(_gear_ratio),
 			gear_ratio_inv(1/_gear_ratio),
-			ks(2*M_PI*1000.0f/((float)(2<<13)*gear_ratio)),
+			ks(2*M_PI/(gear_ratio*60.0f)),//ks(2*M_PI*1000.0f),
 			encoder(13){}
 
 		bool update(const CommonLib::CanFrame &frame){
@@ -56,7 +56,7 @@ namespace G24_STM32HAL::RmcLib{
 			int16_t angle_speed = frame.data[2]<<8 | frame.data[3];
 
 			rad = encoder.update_angle(angle,angle_speed)*gear_ratio_inv;
-			speed = (float)(rad - old_rad)*ks;
+			speed = (float)angle_speed*ks;
 			current = (float)(frame.data[4]<<8 | frame.data[5]);
 			temperature = (float)frame.data[6];
 
@@ -87,7 +87,7 @@ namespace G24_STM32HAL::RmcLib{
 		volatile uint8_t enc_val[2] = {0};
 
 		const float ks;
-		float angle_buff[8] = {0};
+		float angle_buff[4] = {0};
 		size_t head = 0;
 		float rad_sum_old= 0;
 
@@ -117,7 +117,7 @@ namespace G24_STM32HAL::RmcLib{
 			rad = encoder.update_angle(angle)*inv;
 
 			angle_buff[head] = rad;
-			head = (head+1)&7;
+			head = (head+1)&(sizeof(angle_buff)/sizeof(float)-1);
 			float rad_sum = std::reduce(std::begin(angle_buff), std::end(angle_buff));
 			speed = (rad_sum - rad_sum_old)*ks;
 			rad_sum_old = rad_sum;

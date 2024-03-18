@@ -64,7 +64,7 @@ namespace G24_STM32HAL::RmcBoard{
 
 		can_main.set_filter_mask(16, 0x00200000|(board_id<<16), 0x00FF0000, CommonLib::FilterMode::STD_AND_EXT, true);
 		can_main.set_filter_mask(17, 0x00000000|(board_id<<16), 0x00FF0000, CommonLib::FilterMode::STD_AND_EXT, true);
-		can_main.set_filter_mask(18, 0x00F00000,          0x00F00000, CommonLib::FilterMode::STD_AND_EXT, true);
+		can_main.set_filter_mask(18, 0x00F00000,0x00F00000, CommonLib::FilterMode::STD_AND_EXT, true);
 		can_main.start();
 
 		can_motor.set_filter_free(0);
@@ -81,6 +81,7 @@ namespace G24_STM32HAL::RmcBoard{
 
 			m.abs_enc.start();
 		}
+		motor_control_timer.set_and_start(1000);
 	}
 
 	//受信したモーター情報の処理

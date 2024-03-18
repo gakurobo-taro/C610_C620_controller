@@ -45,8 +45,8 @@ namespace G24_STM32HAL::RmcBoard{
 	inline auto LED_B = CommonLib::LEDPwm{&htim5,TIM_CHANNEL_3};
 
 	//can
-	inline auto can_main = CommonLib::CanComm<4,4>{&hcan2,CAN_RX_FIFO1,CAN_FILTER_FIFO1,CAN_IT_RX_FIFO1_MSG_PENDING};
-	inline auto can_motor = CommonLib::CanComm<4,4>{&hcan1,CAN_RX_FIFO0,CAN_FILTER_FIFO0,CAN_IT_RX_FIFO0_MSG_PENDING};
+	inline auto can_main = CommonLib::CanComm{&hcan2,std::make_unique<CommonLib::RingBuffer<CommonLib::CanFrame,4>>(),std::make_unique<CommonLib::RingBuffer<CommonLib::CanFrame,4>>(),CAN_RX_FIFO1,CAN_FILTER_FIFO1,CAN_IT_RX_FIFO1_MSG_PENDING};
+	inline auto can_motor = CommonLib::CanComm{&hcan1,std::make_unique<CommonLib::RingBuffer<CommonLib::CanFrame,4>>(),std::make_unique<CommonLib::RingBuffer<CommonLib::CanFrame,4>>(),CAN_RX_FIFO0,CAN_FILTER_FIFO0,CAN_IT_RX_FIFO0_MSG_PENDING};
 
 	//usb
 	inline auto usb_cdc = CommonLib::UsbCdcComm<4,4>{&hUsbDeviceFS};
