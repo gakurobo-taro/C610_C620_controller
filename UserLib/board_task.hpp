@@ -66,12 +66,12 @@ namespace G24_STM32HAL::RmcBoard{
 		MotorUnitBuilder()
 				.set_LED(RM_LED3_GPIO_Port,RM_LED3_Pin)
 				.set_gear_ratio(36.0f)
-				.set_i2c_encoder(&hi2c3,1000,I2C_SEL3_GPIO_Port,I2C_SEL3_Pin)
+				.set_i2c_encoder(&hi2c3,1000.0f,I2C_SEL3_GPIO_Port,I2C_SEL3_Pin)
 				.build(),
 		MotorUnitBuilder()
 				.set_LED(RM_LED4_GPIO_Port,RM_LED4_Pin)
 				.set_gear_ratio(36.0f)
-				.set_i2c_encoder(&hi2c3,1000,I2C_SEL4_GPIO_Port,I2C_SEL4_Pin)
+				.set_i2c_encoder(&hi2c3,1000.0f,I2C_SEL4_GPIO_Port,I2C_SEL4_Pin)
 				.build(),
 	};
 	inline auto id_map = std::array<CommonLib::IDMap,MOTOR_N>{

@@ -97,6 +97,7 @@ namespace G24_STM32HAL::RmcBoard{
 				}
 
 				motor[id].motor_enc.update(rx_frame);
+				motor[id].driver.operation(motor[id].motor_enc);
 
 				if(!motor[id].led.is_playing()){
 					motor[id].led.play(RmcLib::LEDPattern::led_mode.at((uint8_t)motor[id].driver.get_control_mode()));
@@ -112,7 +113,7 @@ namespace G24_STM32HAL::RmcBoard{
 		auto writer = to_c6x0_frame.writer();
 
 		for(auto &m:motor){
-			m.driver.update_operation_val(m.motor_enc, m.abs_enc);
+			m.driver.abs_operation(m.abs_enc);
 			int16_t duty = (int16_t)(m.driver.get_pwm() * 10000.0f);
 			writer.write<uint8_t>(duty>>8);
 			writer.write<uint8_t>(duty&0xFF);

@@ -173,7 +173,8 @@ namespace G24_STM32HAL::RmcLib{
 		float get_abs_speed(void)const{return abs_state.speed;};
 
 		//pid operation
-		float update_operation_val(const MotorState &_state,const MotorState &_abs_state);
+		float operation(const MotorState &_state);
+		float abs_operation(const MotorState &_abs_state);
 	};
 }
 
