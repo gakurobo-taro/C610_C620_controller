@@ -116,6 +116,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c){
 	RmcBoard::abs_enc_reading_iter->abs_enc.i2c_rx_interrupt_task();
+	RmcBoard::abs_enc_reading_iter->driver.abs_operation(RmcBoard::abs_enc_reading_iter->abs_enc);
 
 	RmcBoard::abs_enc_reading_iter ++;
 

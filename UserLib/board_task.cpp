@@ -113,7 +113,6 @@ namespace G24_STM32HAL::RmcBoard{
 		auto writer = to_c6x0_frame.writer();
 
 		for(auto &m:motor){
-			m.driver.abs_operation(m.abs_enc);
 			int16_t duty = (int16_t)(m.driver.get_pwm() * 10000.0f);
 			writer.write<uint8_t>(duty>>8);
 			writer.write<uint8_t>(duty&0xFF);
