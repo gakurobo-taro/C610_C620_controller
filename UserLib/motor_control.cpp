@@ -10,7 +10,6 @@
 namespace G24_STM32HAL::RmcLib{
 
 void MotorDriver::set_control_mode(ControlMode _mode){
-
 	switch(_mode){
 	case ControlMode::PWM_MODE:
 		pwm = 0.0f;
@@ -23,7 +22,7 @@ void MotorDriver::set_control_mode(ControlMode _mode){
 		target_speed = 0.0f;
 		break;
 	case ControlMode::POSITION_MODE:
-		target_rad = state.rad;//get_current_position();
+		target_rad = state.rad;
 		target_speed = 0.0f;
 		pwm = 0;
 		break;
@@ -39,9 +38,8 @@ void MotorDriver::set_control_mode(ControlMode _mode){
 	mode = _mode;
 }
 
-float MotorDriver::update_operation_val(const MotorState &_state,const MotorState &_abs_state){
+float MotorDriver::operation(const MotorState &_state){
 	state = _state;
-	abs_state = _abs_state;
 	switch(mode){
 	case ControlMode::PWM_MODE:
 		//nop
@@ -54,12 +52,19 @@ float MotorDriver::update_operation_val(const MotorState &_state,const MotorStat
 		pwm = speed_pid(target_speed,state.speed);
 		break;
 	case ControlMode::ABS_POSITION_MODE:
-		target_speed = position_pid(target_rad,abs_state.rad);
-		pwm = speed_pid(target_speed,abs_state.speed);
+		//nop
 		break;
 	default:
 		//nop
 		break;
+	}
+	return pwm;
+}
+float MotorDriver::abs_operation(const MotorState &_abs_state){
+	abs_state = _abs_state;
+	if(mode == ControlMode::ABS_POSITION_MODE){
+		target_speed = position_pid(target_rad,abs_state.rad);
+		pwm = speed_pid(target_speed,abs_state.speed);
 	}
 	return pwm;
 }

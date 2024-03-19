@@ -32,20 +32,8 @@
 extern USBD_HandleTypeDef hUsbDeviceFS;
 
 namespace G24_STM32HAL::RmcBoard{
+	inline uint8_t board_id = 0;
 	//peripherals
-	//GPIO
-	struct GPIOParam{
-		GPIO_TypeDef * port;
-		uint16_t pin;
-		GPIOParam(GPIO_TypeDef * _port,uint16_t _pin):port(_port),pin(_pin){}
-	};
-	inline auto dip_sw = std::array<GPIOParam,4>{
-		GPIOParam{ID0_GPIO_Port,ID0_Pin},
-		GPIOParam{ID1_GPIO_Port,ID1_Pin},
-		GPIOParam{ID2_GPIO_Port,ID2_Pin},
-		GPIOParam{ID3_GPIO_Port,ID3_Pin},
-	};
-
 	//timer
 	inline auto motor_control_timer = CommonLib::InterruptionTimerHard(&htim14);
 	inline auto monitor_timer = CommonLib::InterruptionTimerHard(&htim13);
@@ -57,8 +45,8 @@ namespace G24_STM32HAL::RmcBoard{
 	inline auto LED_B = CommonLib::LEDPwm{&htim5,TIM_CHANNEL_3};
 
 	//can
-	inline auto can_main = CommonLib::CanComm<4,4>{&hcan2,CAN_RX_FIFO1,CAN_FILTER_FIFO1,CAN_IT_RX_FIFO1_MSG_PENDING};
-	inline auto can_motor = CommonLib::CanComm<4,4>{&hcan1,CAN_RX_FIFO0,CAN_FILTER_FIFO0,CAN_IT_RX_FIFO0_MSG_PENDING};
+	inline auto can_main = CommonLib::CanComm{&hcan2,std::make_unique<CommonLib::RingBuffer<CommonLib::CanFrame,4>>(),std::make_unique<CommonLib::RingBuffer<CommonLib::CanFrame,4>>(),CAN_RX_FIFO1,CAN_FILTER_FIFO1,CAN_IT_RX_FIFO1_MSG_PENDING};
+	inline auto can_motor = CommonLib::CanComm{&hcan1,std::make_unique<CommonLib::RingBuffer<CommonLib::CanFrame,4>>(),std::make_unique<CommonLib::RingBuffer<CommonLib::CanFrame,4>>(),CAN_RX_FIFO0,CAN_FILTER_FIFO0,CAN_IT_RX_FIFO0_MSG_PENDING};
 
 	//usb
 	inline auto usb_cdc = CommonLib::UsbCdcComm<4,4>{&hUsbDeviceFS};
@@ -78,12 +66,12 @@ namespace G24_STM32HAL::RmcBoard{
 		MotorUnitBuilder()
 				.set_LED(RM_LED3_GPIO_Port,RM_LED3_Pin)
 				.set_gear_ratio(36.0f)
-				.set_i2c_encoder(&hi2c3,1000,I2C_SEL3_GPIO_Port,I2C_SEL3_Pin)
+				.set_i2c_encoder(&hi2c3,1000.0f,I2C_SEL3_GPIO_Port,I2C_SEL3_Pin)
 				.build(),
 		MotorUnitBuilder()
 				.set_LED(RM_LED4_GPIO_Port,RM_LED4_Pin)
 				.set_gear_ratio(36.0f)
-				.set_i2c_encoder(&hi2c3,1000,I2C_SEL4_GPIO_Port,I2C_SEL4_Pin)
+				.set_i2c_encoder(&hi2c3,1000.0f,I2C_SEL4_GPIO_Port,I2C_SEL4_Pin)
 				.build(),
 	};
 	inline auto id_map = std::array<CommonLib::IDMap,MOTOR_N>{
@@ -93,7 +81,7 @@ namespace G24_STM32HAL::RmcBoard{
 		map_build(motor[3],can_timeout_timer,monitor_timer),
 	};
 
-	inline size_t abs_enc_reading_n = 0;
+	inline auto abs_enc_reading_iter = motor.begin();
 
 	//functions
 	uint8_t read_board_id(void);

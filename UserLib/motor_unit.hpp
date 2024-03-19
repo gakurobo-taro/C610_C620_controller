@@ -25,18 +25,18 @@ namespace G24_STM32HAL::RmcBoard{
 		RmcLib::MotorDriver driver;
 		RmcLib::C6x0State motor_enc;
 		RmcLib::AS5600State abs_enc;
-		std::bitset<0x35+1> monitor;
+		std::bitset<64> monitor;
 
-		RmcLib::ControlMode mode_tmp;
+		RmcLib::ControlMode mode_tmp = RmcLib::ControlMode::PWM_MODE;
 
 		MotorType motor_type = MotorType::C6x0;
 
 		MotorUnit(GPIO_TypeDef *led_port,uint16_t led_pin,float gear_ratio,I2C_HandleTypeDef *i2c,float freq,GPIO_TypeDef *i2c_sel_port,uint16_t i2c_sel_pin)
 			:led(led_port,led_pin),
-			 driver(),
 			 motor_enc(gear_ratio),
 			 monitor(),
-			 abs_enc(i2c,freq,i2c_sel_port,i2c_sel_pin){
+			 abs_enc(i2c,freq,i2c_sel_port,i2c_sel_pin),
+			 driver(){
 			 }
 	};
 	class MotorUnitBuilder{
@@ -105,7 +105,7 @@ namespace G24_STM32HAL::RmcBoard{
 				.add((uint16_t)RmcReg::ENC_INV,       CommonLib::DataAccessor::generate<bool>([&](bool inv)mutable{unit.abs_enc.set_enc_inv(inv);},[&]()->bool{return unit.abs_enc.is_inv();}))
 
 				.add((uint16_t)RmcReg::MONITOR_PERIOD,CommonLib::DataAccessor::generate<uint16_t>([&](uint16_t period)mutable{monitor_timer.set_and_start(period);}, [&]()->uint16_t{return monitor_timer.get_state();}))
-				.add((uint16_t)RmcReg::MONITOR_REG,   CommonLib::DataAccessor::generate<uint64_t>([&](uint64_t val)mutable{ unit.monitor = std::bitset<0x35+1>{val};}, [&]()->uint64_t{ return unit.monitor.to_ullong();}))
+				.add((uint16_t)RmcReg::MONITOR_REG,   CommonLib::DataAccessor::generate<uint64_t>([&](uint64_t val)mutable{ unit.monitor = std::bitset<64>{val};}, [&]()->uint64_t{ return unit.monitor.to_ullong();}))
 				.build();
 	}
 

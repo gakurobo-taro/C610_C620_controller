@@ -28,7 +28,7 @@ private:
 
 	//anti windup
 	float k_anti_windup;
-	const bool enable_anti_windup = false;
+	const bool enable_anti_windup;
 	float limit_min;
 	float limit_max;
 public:

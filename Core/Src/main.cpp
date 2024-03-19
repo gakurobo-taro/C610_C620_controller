@@ -89,13 +89,14 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 }
 void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan){
 	RmcBoard::can_main.rx_interrupt_task();
-	__HAL_TIM_SET_COUNTER(RmcBoard::can_timeout_timer.get_handler(),0);
+	RmcBoard::can_timeout_timer.reset_count();
+
 	RmcBoard::LED_B.play(RmcLib::LEDPattern::ok);
 }
 
 void usb_cdc_rx_callback(const uint8_t *input,size_t size){
 	RmcBoard::usb_cdc.rx_interrupt_task(input, size);
-	__HAL_TIM_SET_COUNTER(RmcBoard::can_timeout_timer.get_handler(),0);
+	RmcBoard::can_timeout_timer.reset_count();
 
 	RmcBoard::LED_B.play(RmcLib::LEDPattern::ok);
 }
@@ -114,28 +115,29 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 }
 
 void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c){
-	RmcBoard::motor[RmcBoard::abs_enc_reading_n].abs_enc.i2c_rx_interrupt_task();
+	RmcBoard::abs_enc_reading_iter->abs_enc.i2c_rx_interrupt_task();
 
-	if(RmcBoard::abs_enc_reading_n == RmcBoard::MOTOR_N-1){
+	RmcBoard::abs_enc_reading_iter ++;
+
+	if(RmcBoard::abs_enc_reading_iter == RmcBoard::motor.end()){
 		return;//最後のエンコーダの処理終了
 	}else{
-		RmcBoard::abs_enc_reading_n++;
-		RmcBoard::motor[RmcBoard::abs_enc_reading_n].abs_enc.read_start();
-		return;
+		RmcBoard::abs_enc_reading_iter->abs_enc.read_start();
 	}
 }
 void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c){
 	//エンコーダの値が読めないモーターは停止
-	if(RmcBoard::motor[RmcBoard::abs_enc_reading_n].driver.get_control_mode() == RmcLib::ControlMode::ABS_POSITION_MODE){
-		RmcBoard::motor[RmcBoard::abs_enc_reading_n].driver.set_control_mode(RmcLib::ControlMode::PWM_MODE);
+	if(RmcBoard::abs_enc_reading_iter->driver.get_control_mode() == RmcLib::ControlMode::ABS_POSITION_MODE){
+		RmcBoard::LED_R.play(RmcLib::LEDPattern::error);
+		RmcBoard::abs_enc_reading_iter->driver.set_control_mode(RmcLib::ControlMode::PWM_MODE);
 	}
 
-	if(RmcBoard::abs_enc_reading_n == RmcBoard::MOTOR_N-1){
+	RmcBoard::abs_enc_reading_iter ++;
+
+	if(RmcBoard::abs_enc_reading_iter == RmcBoard::motor.end()){
 		return;//最後のエンコーダの処理終了
 	}else{
-		RmcBoard::abs_enc_reading_n++;
-		RmcBoard::motor[RmcBoard::abs_enc_reading_n].abs_enc.read_start();
-		return;
+		RmcBoard::abs_enc_reading_iter->abs_enc.read_start();
 	}
 }
 
@@ -179,12 +181,6 @@ int main(void)
   MX_TIM12_Init();
   /* USER CODE BEGIN 2 */
   RmcBoard::init();
-
-  HAL_TIM_Base_Start_IT(RmcBoard::motor_control_timer.get_handler());
-  //HAL_TIM_Base_Start_IT(RmcBoard::monitor_timer);
-  //HAL_TIM_Base_Start_IT(RmcBoard::can_timeout_timer);
-  __HAL_TIM_SET_AUTORELOAD(RmcBoard::monitor_timer.get_handler(), 700);
-  __HAL_TIM_SET_AUTORELOAD(RmcBoard::can_timeout_timer.get_handler(), 2000);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -196,6 +192,11 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	  RmcBoard::main_comm_prossess();
 	  //RmcBoard::motor_test();
+
+//	  CommonLib::SerialData test;
+//	  test.size = sprintf((char*)test.data,"%3.4f,%f\r\n",RmcBoard::motor[1].abs_enc.rad,RmcBoard::motor[1].abs_enc.speed);
+//	  RmcBoard::usb_cdc.tx(test);
+//	  HAL_Delay(1);
   }
   /* USER CODE END 3 */
 }

@@ -61,15 +61,13 @@ namespace G24_STM32HAL::RmcLib::LEDPattern{
 	};
 
 	inline const CommonLib::LEDState ok[] = {
-			{true,100},
-			{false,100},
+			{true,10},
 			{false,0},
 	};
 	inline const CommonLib::LEDState error[]={
 			{true,100},
 			{false,100},
 			{true,700},
-			{false,100},
 			{false,0},
 	};
 }
