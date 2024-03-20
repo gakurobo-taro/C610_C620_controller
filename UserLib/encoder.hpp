@@ -25,7 +25,7 @@ namespace G24_STM32HAL::RmcLib{
 		const float rad_to_angle;
 
 		uint16_t raw_angle;
-		int turn_count = 0;
+		int32_t turn_count = 0;
 
 	public:
 		AngleEncoder(size_t _resolution_bit):
@@ -68,7 +68,8 @@ namespace G24_STM32HAL::RmcLib{
 			raw_angle = angle;
 			return get_rad();
 		}
-
+		void set_turn_count(int32_t _turn_count){turn_count = _turn_count;}
+		int32_t get_turn_count(void)const{return turn_count;}
 	};
 
 }

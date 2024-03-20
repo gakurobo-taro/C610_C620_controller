@@ -51,6 +51,7 @@ namespace G24_STM32HAL::RmcBoard{
 		ABS_POS,
 		ABS_SPD,
 		ENC_INV,
+		ABS_TURN_CNT,
 
 		MONITOR_PERIOD = 0xF0,
 		MONITOR_REG,
