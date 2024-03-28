@@ -124,6 +124,8 @@ namespace G24_STM32HAL::RmcLib{
 		}
 		void set_enc_inv(bool _inv){inv = _inv?-1.0f:1.0f;}
 		bool is_inv(void)const{return inv<0.0f?true:false;}
+		void set_turn_count(int32_t cnt){encoder.set_turn_count(cnt);}
+		int32_t get_turn_count(void)const{return encoder.get_turn_count();}
 	};
 
 	class MotorDriver{

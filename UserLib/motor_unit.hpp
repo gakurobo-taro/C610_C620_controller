@@ -103,6 +103,7 @@ namespace G24_STM32HAL::RmcBoard{
 				.add((uint16_t)RmcReg::ABS_POS,       CommonLib::DataAccessor::generate<float>([&]()->float{return unit.driver.get_abs_position();}))
 				.add((uint16_t)RmcReg::ABS_SPD,       CommonLib::DataAccessor::generate<float>([&]()->float{return unit.driver.get_abs_speed();}))
 				.add((uint16_t)RmcReg::ENC_INV,       CommonLib::DataAccessor::generate<bool>([&](bool inv)mutable{unit.abs_enc.set_enc_inv(inv);},[&]()->bool{return unit.abs_enc.is_inv();}))
+				.add((uint16_t)RmcReg::ABS_TURN_CNT,  CommonLib::DataAccessor::generate<int32_t>([&](int32_t cnt)mutable{unit.abs_enc.set_turn_count(cnt);},[&]()->int32_t{return unit.abs_enc.get_turn_count();}))
 
 				.add((uint16_t)RmcReg::MONITOR_PERIOD,CommonLib::DataAccessor::generate<uint16_t>([&](uint16_t period)mutable{monitor_timer.set_and_start(period);}, [&]()->uint16_t{return monitor_timer.get_state();}))
 				.add((uint16_t)RmcReg::MONITOR_REG,   CommonLib::DataAccessor::generate<uint64_t>([&](uint64_t val)mutable{ unit.monitor = std::bitset<64>{val};}, [&]()->uint64_t{ return unit.monitor.to_ullong();}))

@@ -49,7 +49,7 @@ namespace G24_STM32HAL::RmcBoard{
 	inline auto can_motor = CommonLib::CanComm{&hcan1,std::make_unique<CommonLib::RingBuffer<CommonLib::CanFrame,4>>(),std::make_unique<CommonLib::RingBuffer<CommonLib::CanFrame,4>>(),CAN_RX_FIFO0,CAN_FILTER_FIFO0,CAN_IT_RX_FIFO0_MSG_PENDING};
 
 	//usb
-	inline auto usb_cdc = CommonLib::UsbCdcComm<4,4>{&hUsbDeviceFS};
+	inline auto usb_cdc = CommonLib::UsbCdcComm{&hUsbDeviceFS,std::make_unique<CommonLib::RingBuffer<CommonLib::SerialData,4>>(),std::make_unique<CommonLib::RingBuffer<CommonLib::SerialData,4>>()};
 
 	//driver
 	inline auto motor = std::array<RmcBoard::MotorUnit,MOTOR_N>{
