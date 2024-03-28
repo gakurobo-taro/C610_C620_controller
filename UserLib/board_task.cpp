@@ -67,7 +67,7 @@ namespace G24_STM32HAL::RmcBoard{
 		can_main.set_filter_mask(18, 0x00F00000,0x00F00000, CommonLib::FilterMode::STD_AND_EXT, true);
 		can_main.start();
 
-		can_motor.set_filter_free(0);
+		can_motor.set_filter_mask(0, 0x200, 0x200, CommonLib::FilterMode::ONLY_STD, false);
 		can_motor.start();
 
 		LED_R.start();
