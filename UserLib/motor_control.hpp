@@ -117,7 +117,7 @@ namespace G24_STM32HAL::RmcLib{
 			rad = encoder.update_angle(angle)*inv;
 
 			angle_buff[head] = rad;
-			head = (head+1)&(sizeof(angle_buff)/sizeof(float)-1);
+			head = (head+1)&(sizeof(angle_buff)/sizeof(float) - 1);
 			float rad_sum = std::reduce(std::begin(angle_buff), std::end(angle_buff));
 			speed = (rad_sum - rad_sum_old)*ks;
 			rad_sum_old = rad_sum;

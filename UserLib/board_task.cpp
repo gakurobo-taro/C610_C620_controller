@@ -290,7 +290,10 @@ namespace G24_STM32HAL::RmcBoard{
 		RmcBoard::LED_R.play(RmcLib::LEDPattern::error);
 	}
 	void emergency_stop_release_sequence(void){
+		HAL_Delay(100);
 		for(auto &m:motor){
+			m.abs_enc.start();
+			HAL_Delay(10);
 			m.driver.set_control_mode(m.mode_tmp);
 		}
 	}
