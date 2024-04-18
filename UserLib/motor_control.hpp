@@ -109,7 +109,8 @@ namespace G24_STM32HAL::RmcLib{
 		}
 		void read_start(void){
 			HAL_GPIO_WritePin(port,pin,GPIO_PIN_SET);
-			HAL_I2C_Master_Receive_IT(i2c, as5600_id<<1, const_cast<uint8_t*>(enc_val), 2);
+			HAL_I2C_Mem_Read_IT(i2c, as5600_id<<1, 0x0c, I2C_MEMADD_SIZE_8BIT, const_cast<uint8_t*>(enc_val), 2);
+			//]HAL_I2C_Master_Receive_IT(i2c, as5600_id<<1, const_cast<uint8_t*>(enc_val), 2);
 		}
 		void i2c_rx_interrupt_task(void){
 			uint16_t angle = enc_val[0]<<8 | enc_val[1];

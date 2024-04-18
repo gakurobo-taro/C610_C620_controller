@@ -80,7 +80,7 @@ namespace G24_STM32HAL::RmcBoard{
 		auto set_d_gain = [](RmcLib::PIDGain g,float d)mutable->RmcLib::PIDGain {g.kd = d; return g;};
 		return CommonLib::IDMapBuilder()
 				.add((uint16_t)RmcReg::MOTOR_TYPE,    CommonLib::DataAccessor::generate<MotorType>(&unit.motor_type))
-				.add((uint16_t)RmcReg::CONTROL_TYPE,  CommonLib::DataAccessor::generate<RmcLib::ControlMode>([&](RmcLib::ControlMode m)mutable{unit.driver.set_control_mode(m);},[&]()mutable->RmcLib::ControlMode{return unit.driver.get_control_mode();}))
+				.add((uint16_t)RmcReg::CONTROL_TYPE,  CommonLib::DataAccessor::generate<RmcLib::ControlMode>([&](RmcLib::ControlMode m)mutable{unit.mode_tmp = m; unit.driver.set_control_mode(m);},[&]()mutable->RmcLib::ControlMode{return unit.driver.get_control_mode();}))
 				.add((uint16_t)RmcReg::GEAR_RATIO,    CommonLib::DataAccessor::generate<float>([&](float ratio)mutable{unit.motor_enc.set_gear_ratio(ratio);},[&]()->float{return unit.motor_enc.get_gear_ratio();}))
 				.add((uint16_t)RmcReg::CAN_TIMEOUT,   CommonLib::DataAccessor::generate<uint16_t>([&](uint16_t period)mutable{timeout_timer.set_and_start(period);},[&]()->uint16_t{return timeout_timer.get_state();}))
 
