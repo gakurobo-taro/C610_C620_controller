@@ -15,21 +15,29 @@ void MotorDriver::set_control_mode(ControlMode _mode){
 		pwm = 0.0f;
 		target_rad = 0.0f;
 		target_speed = 0.0f;
+		speed_pid.reset();
+		position_pid.reset();
 		break;
 	case ControlMode::SPEED_MODE:
 		pwm = 0.0f;
 		target_rad = 0.0f;
 		target_speed = 0.0f;
+		speed_pid.reset();
+		position_pid.reset();
 		break;
 	case ControlMode::POSITION_MODE:
 		target_rad = state.rad;
 		target_speed = 0.0f;
-		pwm = 0;
+		pwm = 0.0f;
+		speed_pid.reset();
+		position_pid.reset();
 		break;
 	case ControlMode::ABS_POSITION_MODE:
 		target_rad = abs_state.rad;
 		target_speed = 0.0f;
-		pwm = 0;
+		pwm = 0.0f;
+		speed_pid.reset();
+		position_pid.reset();
 		break;
 	default:
 		//nop
