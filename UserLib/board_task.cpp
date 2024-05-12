@@ -283,7 +283,7 @@ namespace G24_STM32HAL::RmcBoard{
 	}
 
 	void emergency_stop_sequence(void){
-		HAL_Delay(500);
+		HAL_Delay(500); //完全に電源が落ちるまで待機
 		for(auto &m:motor){
 			m.mode_tmp = m.driver.get_control_mode();
 			m.driver.set_control_mode(RmcLib::ControlMode::PWM_MODE);
@@ -293,7 +293,7 @@ namespace G24_STM32HAL::RmcBoard{
 		RmcBoard::LED_R.play(RmcLib::LEDPattern::error);
 	}
 	void emergency_stop_release_sequence(void){
-		HAL_Delay(100);
+		HAL_Delay(100); //完全に電源が復帰するまで待機
 		for(auto &m:motor){
 			m.abs_enc.start();
 			HAL_Delay(10);
