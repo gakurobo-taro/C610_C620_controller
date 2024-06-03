@@ -76,7 +76,7 @@ namespace G24_STM32HAL::RmcBoard{
 
 		for(auto &m:motor){
 			m.driver.set_speed_gain({0.5f, 0.2f, 0.0f});
-			m.driver.set_position_gain({6.0f, 3.0f, 0.0f});
+			m.driver.set_position_gain({6.0f, 0.0f, 0.0f});
 			m.driver.set_speed_limit(-6.0f,6.0f);
 
 			m.abs_enc.start();
